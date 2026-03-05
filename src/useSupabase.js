@@ -196,3 +196,103 @@ export function useUserSettings(userId) {
 
   return { settings, updateSettings, loading }
 }
+
+// ============================================================
+// EMPIRE HOOKS
+// ============================================================
+
+export function useEmpireApps(userId) {
+  const [apps, setApps] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchApps = useCallback(async () => {
+    if (!userId) return
+    const { data, error } = await supabase.from('empire_apps').select('*').eq('user_id', userId).order('sort_order')
+    if (!error && data) setApps(data)
+    setLoading(false)
+  }, [userId])
+
+  useEffect(() => { fetchApps() }, [fetchApps])
+
+  const saveApp = useCallback(async (app) => {
+    if (!userId) return
+    if (app.id) {
+      await supabase.from('empire_apps').update({ name: app.name, url: app.url, stack: app.stack, status: app.status, universe: app.universe, description: app.description, color: app.color }).eq('id', app.id)
+      setApps(prev => prev.map(a => a.id === app.id ? app : a))
+    } else {
+      const { data } = await supabase.from('empire_apps').insert({ user_id: userId, name: app.name, url: app.url || '', stack: app.stack || '', status: app.status || 'planning', universe: app.universe || '', description: app.description || '', color: app.color || '#c9a84c', sort_order: app.sort_order || 0 }).select().single()
+      if (data) setApps(prev => [...prev, data])
+    }
+  }, [userId])
+
+  const removeApp = useCallback(async (id) => {
+    await supabase.from('empire_apps').delete().eq('id', id)
+    setApps(prev => prev.filter(a => a.id !== id))
+  }, [])
+
+  return { apps, saveApp, removeApp, loading }
+}
+
+export function useEmpireSubs(userId) {
+  const [subs, setSubs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchSubs = useCallback(async () => {
+    if (!userId) return
+    const { data, error } = await supabase.from('empire_subs').select('*').eq('user_id', userId).order('sort_order')
+    if (!error && data) setSubs(data)
+    setLoading(false)
+  }, [userId])
+
+  useEffect(() => { fetchSubs() }, [fetchSubs])
+
+  const saveSub = useCallback(async (sub) => {
+    if (!userId) return
+    if (sub.id) {
+      await supabase.from('empire_subs').update({ name: sub.name, category: sub.category, cost: sub.cost, billing: sub.billing, status: sub.status, notes: sub.notes, url: sub.url }).eq('id', sub.id)
+      setSubs(prev => prev.map(s => s.id === sub.id ? sub : s))
+    } else {
+      const { data } = await supabase.from('empire_subs').insert({ user_id: userId, name: sub.name, category: sub.category || '', cost: sub.cost || 0, billing: sub.billing || 'monthly', status: sub.status || 'active', notes: sub.notes || '', url: sub.url || '', sort_order: sub.sort_order || 0 }).select().single()
+      if (data) setSubs(prev => [...prev, data])
+    }
+  }, [userId])
+
+  const removeSub = useCallback(async (id) => {
+    await supabase.from('empire_subs').delete().eq('id', id)
+    setSubs(prev => prev.filter(s => s.id !== id))
+  }, [])
+
+  return { subs, saveSub, removeSub, loading }
+}
+
+export function useEmpirePosts(userId) {
+  const [posts, setPosts] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  const fetchPosts = useCallback(async () => {
+    if (!userId) return
+    const { data, error } = await supabase.from('empire_posts').select('*').eq('user_id', userId).order('sort_order')
+    if (!error && data) setPosts(data)
+    setLoading(false)
+  }, [userId])
+
+  useEffect(() => { fetchPosts() }, [fetchPosts])
+
+  const savePost = useCallback(async (post) => {
+    if (!userId) return
+    if (post.id) {
+      await supabase.from('empire_posts').update({ day: post.day, platform: post.platform, content: post.content, status: post.status, link: post.link }).eq('id', post.id)
+      setPosts(prev => prev.map(p => p.id === post.id ? post : p))
+    } else {
+      const { data } = await supabase.from('empire_posts').insert({ user_id: userId, day: post.day || 'Monday', platform: post.platform || 'Facebook', content: post.content || '', status: post.status || 'idea', link: post.link || '', sort_order: post.sort_order || 0 }).select().single()
+      if (data) setPosts(prev => [...prev, data])
+    }
+  }, [userId])
+
+  const removePost = useCallback(async (id) => {
+    await supabase.from('empire_posts').delete().eq('id', id)
+    setPosts(prev => prev.filter(p => p.id !== id))
+  }, [])
+
+  return { posts, savePost, removePost, loading }
+}
