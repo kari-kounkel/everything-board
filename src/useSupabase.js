@@ -163,7 +163,7 @@ export function useCards(userId) {
 // USER SETTINGS HOOKS
 // ============================================================
 export function useUserSettings(userId) {
-  const [settings, setSettingsState] = useState({ onboarded: false, view_mode: 'circles' })
+  const [settings, setSettingsState] = useState({ onboarded: false, view_mode: 'circles', subscription_tier: 'free' })
   const [loading, setLoading] = useState(true)
 
   const fetchSettings = useCallback(async () => {
@@ -174,10 +174,14 @@ export function useUserSettings(userId) {
       .eq('user_id', userId)
       .single()
     if (!error && data) {
-      setSettingsState({ onboarded: data.onboarded, view_mode: data.view_mode })
+      setSettingsState({ 
+        onboarded: data.onboarded, 
+        view_mode: data.view_mode,
+        subscription_tier: data.subscription_tier || 'free'
+      })
     } else {
       // Create settings row for new user
-      await supabase.from('user_settings').insert({ user_id: userId, onboarded: false, view_mode: 'circles' })
+      await supabase.from('user_settings').insert({ user_id: userId, onboarded: false, view_mode: 'circles', subscription_tier: 'free' })
     }
     setLoading(false)
   }, [userId])

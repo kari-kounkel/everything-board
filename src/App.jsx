@@ -64,6 +64,69 @@ const LINK_TYPES = [
 ];
 
 // ============================================================
+// ============================================================
+// STRIPE PAYMENT LINKS
+// ============================================================
+const STRIPE_MONTHLY = "https://buy.stripe.com/28E00j8RpdlU8n18ew18c01";
+const STRIPE_ANNUAL  = "https://buy.stripe.com/aFa5kD2t195E32H52k18c02";
+
+// ============================================================
+// UPGRADE MODAL
+// ============================================================
+function UpgradeModal({ onClose }) {
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+      <div style={{ background: "#FEFCF6", borderRadius: "24px", maxWidth: "480px", width: "100%", padding: "40px 36px", boxShadow: "0 24px 80px rgba(0,0,0,0.3)", fontFamily: "'DM Sans', sans-serif", position: "relative" }}>
+        <button onClick={onClose} style={{ position: "absolute", top: "16px", right: "20px", background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#aaa" }}>×</button>
+        <div style={{ textAlign: "center", marginBottom: "28px" }}>
+          <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔮</div>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.6rem", fontWeight: 900, color: "#1A1A1A", margin: "0 0 8px" }}>Unlock Everything</h2>
+          <p style={{ color: "#888", fontSize: "0.9rem", margin: 0 }}>You're on the free plan. Here's what you're missing:</p>
+        </div>
+        <div style={{ background: "#FAF8F3", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
+          {[
+            ["🔮", "Up to 13 universes (you have 3 now)"],
+            ["☁️", "Cloud sync across all your devices"],
+            ["📤", "CSV export of all your projects"],
+            ["🏛️", "Empire Command Center — track every app you've built"],
+            ["💳", "Subscription tracker — know what you're paying"],
+          ].map(([emoji, text]) => (
+            <div key={text} style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "12px" }}>
+              <span style={{ fontSize: "18px" }}>{emoji}</span>
+              <span style={{ fontSize: "0.88rem", color: "#333", fontWeight: 500 }}>{text}</span>
+            </div>
+          ))}
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          <a href={STRIPE_ANNUAL} target="_blank" rel="noreferrer" style={{ display: "block", textAlign: "center", background: "#1A1A1A", color: "#E8B931", padding: "16px", borderRadius: "12px", fontWeight: 800, fontSize: "1rem", textDecoration: "none", letterSpacing: "0.3px" }}>
+            ✨ Go Pro — $79/year <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "#aaa" }}>(best value)</span>
+          </a>
+          <a href={STRIPE_MONTHLY} target="_blank" rel="noreferrer" style={{ display: "block", textAlign: "center", background: "#F5F0E8", color: "#333", padding: "13px", borderRadius: "12px", fontWeight: 700, fontSize: "0.9rem", textDecoration: "none", border: "1.5px solid #E0D8C8" }}>
+            Try monthly — $9/month
+          </a>
+        </div>
+        <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#aaa", marginTop: "16px" }}>After payment, refresh the app. Your Pro features will be waiting.</p>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// LOCKED TAB OVERLAY
+// ============================================================
+function LockedFeature({ title, emoji, onUpgrade }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", minHeight: "60vh", fontFamily: "'DM Sans', sans-serif", padding: "40px" }}>
+      <div style={{ fontSize: "48px", marginBottom: "16px", opacity: 0.4 }}>{emoji}</div>
+      <h3 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", color: "#1A1A1A", marginBottom: "8px" }}>{title}</h3>
+      <p style={{ color: "#888", fontSize: "0.9rem", marginBottom: "24px", textAlign: "center", maxWidth: "320px" }}>This feature is part of The Everything Board Pro. Upgrade to unlock it.</p>
+      <button onClick={onUpgrade} style={{ background: "#1A1A1A", color: "#E8B931", border: "none", padding: "14px 28px", borderRadius: "12px", fontWeight: 800, fontSize: "0.95rem", cursor: "pointer" }}>
+        🔮 Upgrade to Pro
+      </button>
+    </div>
+  );
+}
+
 // UNIVERSES — user-created, 3–13 cap, persisted in localStorage
 // ============================================================
 const STARTER_UNIVERSES = [
@@ -686,11 +749,12 @@ function ViewToggle({ view, onToggle }) {
 // ============================================================
 // CSV TOOLBAR (Export, Import, Template)
 // ============================================================
-function CSVToolbar({ cards, onImport, onToast, universes }) {
+function CSVToolbar({ cards, onImport, onToast, universes, isPro, onUpgrade }) {
   const fileRef = useRef(null);
   const [showMenu, setShowMenu] = useState(false);
 
   const handleExport = () => {
+    if (!isPro) { onUpgrade(); return; }
     const csv = cardsToCSV(cards, universes);
     const date = new Date().toISOString().slice(0, 10);
     downloadCSV(csv, `everything-board-export-${date}.csv`);
@@ -706,6 +770,7 @@ function CSVToolbar({ cards, onImport, onToast, universes }) {
   };
 
   const handleFileChange = (e) => {
+    if (!isPro) { onUpgrade(); return; }
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
@@ -1704,6 +1769,19 @@ export default function TheEverythingBoard({ user }) {
   const [viewMode, setViewMode] = useState("circles");
   const [universeView, setUniverseView] = useState(null);
   const [showUniverseManager, setShowUniverseManager] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+
+  const isPro = settings.subscription_tier === 'pro';
+
+  // Check for Stripe success redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('upgraded') === 'true') {
+      updateSettings({ subscription_tier: 'pro' });
+      setToast("🎉 Welcome to Pro! All 13 universes are yours.");
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }, []);
 
   useEffect(() => { if (settings.view_mode) setViewMode(settings.view_mode); }, [settings.view_mode]);
 
@@ -1807,7 +1885,7 @@ export default function TheEverythingBoard({ user }) {
           <span style={{ fontSize: "10px", color: "#888", fontFamily: "'DM Sans', sans-serif", fontStyle: "italic" }}>For people who do everything</span>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <CSVToolbar cards={cards} onImport={handleImport} onToast={setToast} universes={universes} />
+          <CSVToolbar cards={cards} onImport={handleImport} onToast={setToast} universes={universes} isPro={isPro} onUpgrade={() => setShowUpgrade(true)} />
           <ViewToggle view={viewMode} onToggle={toggleView} />
           <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="🔍 Search..."
             style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #333", background: "#2A2A2A", color: "#E6E2D8", fontSize: "11px", fontFamily: "'DM Sans', sans-serif", outline: "none", width: "160px" }} />
@@ -1815,6 +1893,10 @@ export default function TheEverythingBoard({ user }) {
             <button onClick={() => addCard(lists[0]?.id)} style={{ padding: "6px 14px", borderRadius: "8px", border: "none", background: "#E8B931", color: "#1A1A1A", fontWeight: 800, cursor: "pointer", fontSize: "11px" }}>+ New Card</button>
           )}
           <button onClick={handleLogout} title="Sign out" style={{ padding: "6px 10px", borderRadius: "8px", border: "1px solid #444", background: "#333", color: "#888", fontWeight: 600, cursor: "pointer", fontSize: "10px", fontFamily: "'DM Sans', sans-serif" }}>Sign Out</button>
+          {isPro
+            ? <span style={{ padding: "4px 10px", borderRadius: "8px", background: "#E8B93122", color: "#E8B931", fontSize: "9px", fontWeight: 800, letterSpacing: "1px", border: "1px solid #E8B93144" }}>PRO</span>
+            : <button onClick={() => setShowUpgrade(true)} style={{ padding: "6px 12px", borderRadius: "8px", border: "none", background: "#E8B931", color: "#1A1A1A", fontWeight: 800, cursor: "pointer", fontSize: "10px" }}>✨ Upgrade</button>
+          }
         </div>
       </div>
 
@@ -1862,6 +1944,7 @@ export default function TheEverythingBoard({ user }) {
       {(!isDashboard || showUniverseView) && viewMode === "circles" && <HomeMarble onClick={handleGoHome} />}
       {editing && <CardEditor card={editing} onSave={saveCard} onDelete={deleteCard} onClose={() => setEditing(null)} currentTab={activeTab} allCards={cards} universes={universes} />}
       {toast && <AutoToast message={toast} onDone={() => setToast(null)} />}
+      {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
       {showUniverseManager && (
         <UniverseManager universes={universes} cards={cards}
           onSave={async (nu) => { await saveUniversesToDb(nu); setToast(`Universes updated — ${nu.length} marble${nu.length !== 1 ? "s" : ""} in the bag.`); }}
