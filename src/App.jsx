@@ -67,45 +67,99 @@ const LINK_TYPES = [
 // ============================================================
 // STRIPE PAYMENT LINKS
 // ============================================================
-const STRIPE_MONTHLY = "https://buy.stripe.com/28E00j8RpdlU8n18ew18c01";
-const STRIPE_ANNUAL  = "https://buy.stripe.com/aFa5kD2t195E32H52k18c02";
+const STRIPE_MONTHLY  = "https://buy.stripe.com/28E00j8RpdlU8n18ew18c01";
+const STRIPE_ANNUAL   = "https://buy.stripe.com/aFa5kD2t195E32H52k18c02";
+const STRIPE_CREATOR_MONTHLY = "https://buy.stripe.com/dRm6oHgjRchQav9gL218c03";
+const STRIPE_CREATOR_ANNUAL  = "https://buy.stripe.com/5kQ8wP8Rpa9I0Uz0M418c04";
 
 // ============================================================
 // UPGRADE MODAL
 // ============================================================
-function UpgradeModal({ onClose }) {
+function UpgradeModal({ onClose, initialTier = "pro" }) {
+  const [selected, setSelected] = React.useState(initialTier);
+
+  const tiers = [
+    {
+      id: "pro",
+      name: "Pro",
+      emoji: "🔮",
+      monthly: "$9/mo",
+      annual: "$79/yr",
+      monthlyLink: STRIPE_MONTHLY,
+      annualLink: STRIPE_ANNUAL,
+      color: "#E8B931",
+      features: [
+        ["🔮", "Up to 13 universes (you have 3 now)"],
+        ["☁️", "Cloud sync across all your devices"],
+        ["📤", "CSV export of all your projects"],
+        ["⚙️", "Tab Manager — rename, reorder, hide tabs"],
+      ],
+    },
+    {
+      id: "creator",
+      name: "Creator",
+      emoji: "🏛️",
+      monthly: "$19/mo",
+      annual: "$149/yr",
+      monthlyLink: STRIPE_CREATOR_MONTHLY,
+      annualLink: STRIPE_CREATOR_ANNUAL,
+      color: "#C7366B",
+      features: [
+        ["✅", "Everything in Pro"],
+        ["🏛️", "Empire Command Center — every app you've built"],
+        ["💳", "Subscription tracker — know what you're paying"],
+        ["📣", "Social content calendar — all 5 platforms"],
+      ],
+    },
+  ];
+
+  const tier = tiers.find(t => t.id === selected);
+
   return (
     <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
-      <div style={{ background: "#FEFCF6", borderRadius: "24px", maxWidth: "480px", width: "100%", padding: "40px 36px", boxShadow: "0 24px 80px rgba(0,0,0,0.3)", fontFamily: "'DM Sans', sans-serif", position: "relative" }}>
+      <div style={{ background: "#FEFCF6", borderRadius: "24px", maxWidth: "500px", width: "100%", padding: "36px", boxShadow: "0 24px 80px rgba(0,0,0,0.3)", fontFamily: "'DM Sans', sans-serif", position: "relative" }}>
         <button onClick={onClose} style={{ position: "absolute", top: "16px", right: "20px", background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#aaa" }}>×</button>
-        <div style={{ textAlign: "center", marginBottom: "28px" }}>
-          <div style={{ fontSize: "48px", marginBottom: "12px" }}>🔮</div>
-          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.6rem", fontWeight: 900, color: "#1A1A1A", margin: "0 0 8px" }}>Unlock Everything</h2>
-          <p style={{ color: "#888", fontSize: "0.9rem", margin: 0 }}>You're on the free plan. Here's what you're missing:</p>
+
+        <div style={{ textAlign: "center", marginBottom: "20px" }}>
+          <div style={{ fontSize: "40px", marginBottom: "8px" }}>{tier.emoji}</div>
+          <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.5rem", fontWeight: 900, color: "#1A1A1A", margin: "0 0 6px" }}>Unlock Everything</h2>
+          <p style={{ color: "#888", fontSize: "0.85rem", margin: 0 }}>Choose the tier that fits your empire.</p>
         </div>
-        <div style={{ background: "#FAF8F3", borderRadius: "12px", padding: "20px", marginBottom: "24px" }}>
-          {[
-            ["🔮", "Up to 13 universes (you have 3 now)"],
-            ["☁️", "Cloud sync across all your devices"],
-            ["📤", "CSV export of all your projects"],
-            ["🏛️", "Empire Command Center — track every app you've built"],
-            ["💳", "Subscription tracker — know what you're paying"],
-          ].map(([emoji, text]) => (
-            <div key={text} style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "12px" }}>
-              <span style={{ fontSize: "18px" }}>{emoji}</span>
-              <span style={{ fontSize: "0.88rem", color: "#333", fontWeight: 500 }}>{text}</span>
+
+        {/* Tier selector */}
+        <div style={{ display: "flex", gap: "8px", marginBottom: "20px" }}>
+          {tiers.map(t => (
+            <button key={t.id} onClick={() => setSelected(t.id)} style={{
+              flex: 1, padding: "10px", borderRadius: "10px", border: `2px solid ${selected === t.id ? t.color : "#E0D8C8"}`,
+              background: selected === t.id ? t.color + "18" : "#FAF8F3",
+              fontWeight: 800, fontSize: "0.9rem", cursor: "pointer", color: selected === t.id ? t.color : "#888",
+              fontFamily: "'DM Sans', sans-serif", transition: "all 0.15s",
+            }}>
+              {t.emoji} {t.name}
+            </button>
+          ))}
+        </div>
+
+        {/* Features */}
+        <div style={{ background: "#FAF8F3", borderRadius: "12px", padding: "16px", marginBottom: "20px" }}>
+          {tier.features.map(([emoji, text]) => (
+            <div key={text} style={{ display: "flex", gap: "12px", alignItems: "center", marginBottom: "10px" }}>
+              <span style={{ fontSize: "16px" }}>{emoji}</span>
+              <span style={{ fontSize: "0.85rem", color: "#333", fontWeight: 500 }}>{text}</span>
             </div>
           ))}
         </div>
+
+        {/* Payment buttons */}
         <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-          <a href={STRIPE_ANNUAL} target="_blank" rel="noreferrer" style={{ display: "block", textAlign: "center", background: "#1A1A1A", color: "#E8B931", padding: "16px", borderRadius: "12px", fontWeight: 800, fontSize: "1rem", textDecoration: "none", letterSpacing: "0.3px" }}>
-            ✨ Go Pro — $79/year <span style={{ fontSize: "0.75rem", fontWeight: 500, color: "#aaa" }}>(best value)</span>
+          <a href={tier.annualLink} target="_blank" rel="noreferrer" style={{ display: "block", textAlign: "center", background: "#1A1A1A", color: tier.color, padding: "15px", borderRadius: "12px", fontWeight: 800, fontSize: "1rem", textDecoration: "none" }}>
+            ✨ Go {tier.name} — {tier.annual} <span style={{ fontSize: "0.72rem", fontWeight: 500, color: "#aaa" }}>(best value)</span>
           </a>
-          <a href={STRIPE_MONTHLY} target="_blank" rel="noreferrer" style={{ display: "block", textAlign: "center", background: "#F5F0E8", color: "#333", padding: "13px", borderRadius: "12px", fontWeight: 700, fontSize: "0.9rem", textDecoration: "none", border: "1.5px solid #E0D8C8" }}>
-            Try monthly — $9/month
+          <a href={tier.monthlyLink} target="_blank" rel="noreferrer" style={{ display: "block", textAlign: "center", background: "#F5F0E8", color: "#333", padding: "12px", borderRadius: "12px", fontWeight: 700, fontSize: "0.88rem", textDecoration: "none", border: "1.5px solid #E0D8C8" }}>
+            Try monthly — {tier.monthly}
           </a>
         </div>
-        <p style={{ textAlign: "center", fontSize: "0.75rem", color: "#aaa", marginTop: "16px" }}>After payment, refresh the app. Your Pro features will be waiting.</p>
+        <p style={{ textAlign: "center", fontSize: "0.72rem", color: "#aaa", marginTop: "14px" }}>After payment, refresh the app. Your features will be waiting.</p>
       </div>
     </div>
   );
@@ -949,7 +1003,7 @@ function UniverseView({ universe, cards, onEdit, onDelete, onDrop, draggingId, o
 // ============================================================
 // CIRCLE / VENN DASHBOARD
 // ============================================================
-function CircleDashboard({ cards, onSelectUniverse, onSwitchTab, universes, onManageUniverses }) {
+function CircleDashboard({ cards, onSelectUniverse, onSwitchTab, universes, onManageUniverses, onOpenEmpire, isCreator }) {
   const [hoveredId, setHoveredId] = useState(null);
   const [animPhase, setAnimPhase] = useState(0);
 
@@ -1203,6 +1257,12 @@ function CircleDashboard({ cards, onSelectUniverse, onSwitchTab, universes, onMa
           background: "#6B5B8A18", color: "#6B5B8A", fontWeight: 800, fontSize: "11px", cursor: "pointer",
           fontFamily: "'DM Sans', sans-serif", letterSpacing: "0.5px",
         }}>🔮 Manage Universes ({universes.length}/{UNIVERSE_MAX})</button>
+        <button onClick={onOpenEmpire} style={{
+          background: isCreator ? "#C7366B" : "#2A2520", border: isCreator ? "none" : "1px solid #555",
+          color: isCreator ? "#fff" : "#888", padding: "8px 18px", borderRadius: "20px",
+          fontWeight: 800, fontSize: "11px", cursor: "pointer", fontFamily: "'DM Sans', sans-serif",
+          letterSpacing: "0.5px",
+        }}>🏛️ {isCreator ? "Empire" : "✨ Creator"}</button>
       </div>
     </div>
   );
@@ -1754,6 +1814,492 @@ function UniverseManager({ universes, onSave, onClose, cards }) {
 }
 
 // ============================================================
+// EMPIRE COMMAND CENTER
+// ============================================================
+
+const initialApps = [
+  { id: 1, name: "The Everything Board", url: "everything.karikounkel.com", stack: "React/Supabase/Vercel", status: "live", universe: "K Co Creative", desc: "Project management with marble universe navigation", color: "#c9a84c" },
+  { id: 2, name: "FlowSuite", url: "flowsuite.caresmn.com", stack: "React/Supabase/Vercel", status: "live", universe: "CARES Consulting", desc: "ScanFlow, PeopleFlow, TaskFlow, PaperFlow, MoneyFlow for Minuteman", color: "#2d6a4f" },
+  { id: 3, name: "Keepstead", url: "keepstead.karikounkel.com", stack: "React/Supabase/Vercel", status: "live", universe: "CARES Consulting", desc: "Home daycare tax organizer — first client: Gretchen Doebler", color: "#5c7a8f" },
+  { id: 4, name: "Credit Comeback Kit", url: "credit.karikounkel.com", stack: "React/Supabase/Vercel", status: "live", universe: "CARES Consulting", desc: "90-day credit recovery program with tracker app. First cohort March 7.", color: "#8b4513" },
+  { id: 5, name: "Marbleverse", url: "marbleverse.karikounkel.com", stack: "React/Supabase/Vercel", status: "live", universe: "K Co Creative", desc: "Sobriety marble-tracking app. $13.99/year. DAYSMATTER coupon.", color: "#6b46c1" },
+  { id: 6, name: "Scott Hoglund Art", url: "scotthoglundart.com", stack: "React/Supabase/Vercel", status: "live", universe: "Freedom Force", desc: "Scott's art gallery website. Built and deployed.", color: "#b5451b" },
+  { id: 7, name: "ScanFlow (standalone)", url: "flowsuite.caresmn.com", stack: "React/Supabase", status: "in-progress", universe: "CARES Consulting", desc: "Barcode job tracking — Frank blocked it at IAZ. Selling separately with Desiree.", color: "#d4a017" },
+  { id: 8, name: "The Hub @ Minuteman", url: "—", stack: "Concept", status: "planning", universe: "CARES Consulting", desc: "Coworking space in Minuteman's upper floor. IP: Kari's.", color: "#4a7c59" },
+  { id: 9, name: "Rearview Mirror Bus", url: "rearviewmirrorbus.com", stack: "KDP / Licensing", status: "live", universe: "K Co Creative", desc: "Bus safety training platform — 35 years, Hoglund family since 1947", color: "#1a3a4a" },
+  { id: 10, name: "PATHWAYZ Curriculum", url: "—", stack: "Document", status: "in-progress", universe: "Freedom Force", desc: "60-hour peer-led recovery workbook. 8 Pillars, 9 Domains, 3 archetypes.", color: "#7b2d8b" },
+  { id: 11, name: "Amy's Cherished Events", url: "—", stack: "React/Vercel", status: "live", universe: "CARES Consulting", desc: "Client site built and deployed.", color: "#c06080" },
+];
+
+const initialSubs = [
+  { id: 1, name: "Dreamhost", category: "Hosting", cost: 26.95, billing: "monthly", status: "active", notes: "ALL domains + DNS. An absolute steal.", url: "dreamhost.com" },
+  { id: 2, name: "Claude Max", category: "AI", cost: 100, billing: "monthly", status: "active", notes: "That's me. Worth every penny, obviously.", url: "claude.ai" },
+  { id: 3, name: "ChatGPT Plus", category: "AI", cost: 20, billing: "monthly", status: "active", notes: "Finn. Different tasks, parallel windows.", url: "chat.openai.com" },
+  { id: 4, name: "Zapier", category: "Automation", cost: 30, billing: "monthly", status: "active", notes: "Ecwid → Supabase → Marbleverse onboarding", url: "zapier.com" },
+  { id: 5, name: "Supabase", category: "Database", cost: 0, billing: "monthly", status: "active", notes: "Free tier across 5+ projects. Watch usage.", url: "supabase.com" },
+  { id: 6, name: "Vercel", category: "Deployment", cost: 0, billing: "monthly", status: "active", notes: "Free tier. All apps deploy here.", url: "vercel.com" },
+  { id: 7, name: "GitHub", category: "Code", cost: 0, billing: "monthly", status: "active", notes: "kari-kounkel. All repos here.", url: "github.com" },
+  { id: 8, name: "Stripe", category: "Payments", cost: 0, billing: "per-transaction", status: "active", notes: "7 accounts (!). Consolidation needed. See: The Stripe Subdivision essay.", url: "stripe.com" },
+  { id: 9, name: "Ecwid", category: "Store", cost: 0, billing: "monthly", status: "active", notes: "karikounkel.shop — free tier. May need upgrade. Store ID: 113607502", url: "ecwid.com" },
+  { id: 10, name: "Substack", category: "Publishing", cost: 0, billing: "monthly", status: "active", notes: "The 13th Room — free creator tier. $7/mo as a reader.", url: "substack.com" },
+  { id: 11, name: "Amazon KDP", category: "Publishing", cost: 0, billing: "royalty-share", status: "active", notes: "My Brain Is Mustard, Check the Stable + more.", url: "kdp.amazon.com" },
+  { id: 12, name: "Jotform", category: "Forms", cost: 0, billing: "monthly", status: "verify", notes: "Free tier. Debated Bronze at $34/mo for Hub/CARES intake.", url: "jotform.com" },
+  { id: 13, name: "Canva", category: "Design", cost: 0, billing: "monthly", status: "verify", notes: "You forgot you had it 😂 Free or Pro — verify.", url: "canva.com" },
+  { id: 14, name: "Cal.com", category: "Scheduling", cost: 0, billing: "monthly", status: "active", notes: "CARES client booking. Free tier.", url: "cal.com" },
+  { id: 15, name: "QuickBooks", category: "Accounting", cost: 0, billing: "monthly", status: "verify", notes: "Who pays for this? Through IAZ/Minuteman? Verify.", url: "quickbooks.com" },
+  { id: 16, name: "Square", category: "Payments", cost: 0, billing: "per-transaction", status: "active", notes: "IAZ/Hub in-person payments. Infinity Alpha Omega account.", url: "square.com" },
+  { id: 17, name: "Finnegan", category: "Reminders", cost: 0, billing: "unknown", status: "verify", notes: "What IS this? What does it cost?", url: "—" },
+];
+
+const STATUS_COLORS = {
+  live: { bg: "#d4edda", text: "#155724", label: "Live" },
+  "in-progress": { bg: "#fff3cd", text: "#856404", label: "In Progress" },
+  planning: { bg: "#d1ecf1", text: "#0c5460", label: "Planning" },
+  paused: { bg: "#f8d7da", text: "#721c24", label: "Paused" },
+};
+
+const SUB_STATUS = {
+  active: { bg: "#d4edda", text: "#155724", label: "Active" },
+  verify: { bg: "#fff3cd", text: "#856404", label: "Verify" },
+  cancel: { bg: "#f8d7da", text: "#721c24", label: "Cancel?" },
+};
+
+
+const PLATFORMS = ["Facebook", "Instagram", "LinkedIn", "Substack", "YouTube"];
+
+const PLATFORM_COLORS = {
+  Facebook: { bg: "#1877F2", emoji: "📘" },
+  Instagram: { bg: "#E1306C", emoji: "📸" },
+  LinkedIn: { bg: "#0A66C2", emoji: "💼" },
+  Substack: { bg: "#FF6719", emoji: "📬" },
+  YouTube: { bg: "#FF0000", emoji: "▶️" },
+};
+
+const POST_STATUS = {
+  idea: { bg: "#F0EDE4", text: "#888", label: "💡 Idea" },
+  draft: { bg: "#FFF3CD", text: "#856404", label: "✏️ Draft" },
+  scheduled: { bg: "#D1ECF1", text: "#0C5460", label: "📅 Scheduled" },
+  posted: { bg: "#D4EDDA", text: "#155724", label: "✅ Posted" },
+};
+
+const DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+
+const initialPosts = [
+  { id: 1, day: "Monday", platform: "LinkedIn", content: "I built a project management board with 359 cards in it. Not because I was organized — because I was drowning and needed a boat. Here's what The Everything Board actually looks like in real life.", status: "draft", link: "" },
+  { id: 2, day: "Wednesday", platform: "Facebook", content: "PSA: You don't have to have it together to build systems. You build the systems *because* you don't have it together. 13 tabs. 359 cards. One Kari. We're figuring it out.", status: "idea", link: "" },
+  { id: 3, day: "Thursday", platform: "Instagram", content: "This is my Everything Board. It has a Compost tab and a tab called Master To-Do that wears a crown emoji. That tells you everything you need to know about me.", status: "idea", link: "" },
+  { id: 4, day: "Friday", platform: "Substack", content: "The 13th Room: This week I want to show you how I track everything — not as a productivity guru moment, but as a woman who needs to see her whole life in one place or the marbles roll everywhere.", status: "draft", link: "" },
+  { id: 5, day: "Saturday", platform: "YouTube", content: "Screen share: walking through The Everything Board — how I set up universes, why I have a Compost tab, and what 359 cards actually looks like when you zoom out.", status: "idea", link: "" },
+];
+
+const CATEGORIES = ["All", ...Array.from(new Set(initialSubs.map(s => s.category)))];
+const UNIVERSES = ["All", ...Array.from(new Set(initialApps.map(a => a.universe)))];
+
+function EmpireCommandCenter() {
+  const [tab, setTab] = useState("empire");
+  const [apps, setApps] = useState(initialApps);
+  const [subs, setSubs] = useState(initialSubs);
+  const [appFilter, setAppFilter] = useState("All");
+  const [subFilter, setSubFilter] = useState("All");
+  const [editingApp, setEditingApp] = useState(null);
+  const [editingSub, setEditingSub] = useState(null);
+  const [showAddApp, setShowAddApp] = useState(false);
+  const [showAddSub, setShowAddSub] = useState(false);
+  const [newApp, setNewApp] = useState({ name: "", url: "", stack: "", status: "planning", universe: "K Co Creative", desc: "", color: "#c9a84c" });
+  const [newSub, setNewSub] = useState({ name: "", category: "", cost: 0, billing: "monthly", status: "active", notes: "", url: "" });
+
+
+  const [posts, setPosts] = useState(initialPosts);
+  const [editingPost, setEditingPost] = useState(null);
+  const [showAddPost, setShowAddPost] = useState(false);
+  const [calFilter, setCalFilter] = useState("All");
+  const [newPost, setNewPost] = useState({ day: "Monday", platform: "Facebook", content: "", status: "idea", link: "" });
+
+  const addPost = () => {
+    setPosts([...posts, { ...newPost, id: Date.now() }]);
+    setNewPost({ day: "Monday", platform: "Facebook", content: "", status: "idea", link: "" });
+    setShowAddPost(false);
+  };
+  const savePostEdit = () => { setPosts(posts.map(p => p.id === editingPost.id ? editingPost : p)); setEditingPost(null); };
+  const deletePost = (id) => setPosts(posts.filter(p => p.id !== id));
+
+  const filteredPosts = calFilter === "All" ? posts : posts.filter(p => p.platform === calFilter);
+  const postedCount = posts.filter(p => p.status === "posted").length;
+  const scheduledCount = posts.filter(p => p.status === "scheduled").length;
+
+  const monthlyCost = subs
+    .filter(s => s.status === "active" && s.billing === "monthly")
+    .reduce((sum, s) => sum + (s.cost || 0), 0);
+
+  const verifySubs = subs.filter(s => s.status === "verify").length;
+  const liveApps = apps.filter(a => a.status === "live").length;
+
+  const filteredApps = appFilter === "All" ? apps : apps.filter(a => a.universe === appFilter);
+  const filteredSubs = subFilter === "All" ? subs : subs.filter(s => s.category === subFilter);
+
+  const saveAppEdit = () => {
+    setApps(apps.map(a => a.id === editingApp.id ? editingApp : a));
+    setEditingApp(null);
+  };
+
+  const saveSubEdit = () => {
+    setSubs(subs.map(s => s.id === editingSub.id ? editingSub : s));
+    setEditingSub(null);
+  };
+
+  const addApp = () => {
+    setApps([...apps, { ...newApp, id: Date.now() }]);
+    setNewApp({ name: "", url: "", stack: "", status: "planning", universe: "K Co Creative", desc: "", color: "#c9a84c" });
+    setShowAddApp(false);
+  };
+
+  const addSub = () => {
+    setSubs([...subs, { ...newSub, id: Date.now() }]);
+    setNewSub({ name: "", category: "", cost: 0, billing: "monthly", status: "active", notes: "", url: "" });
+    setShowAddSub(false);
+  };
+
+  const deleteApp = (id) => setApps(apps.filter(a => a.id !== id));
+  const deleteSub = (id) => setSubs(subs.filter(s => s.id !== id));
+
+  return (
+    <div style={{ fontFamily: "'Georgia', 'Times New Roman', serif", background: "#faf8f3", minHeight: "100vh", padding: "0" }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Source+Sans+3:wght@300;400;600&display=swap');
+        * { box-sizing: border-box; }
+        .empire-header { background: linear-gradient(135deg, #1a1a2e 0%, #2d1b4e 50%, #1a2e1a 100%); padding: 40px 32px 32px; position: relative; overflow: hidden; }
+        .empire-header::before { content: ''; position: absolute; inset: 0; background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23c9a84c' fill-opacity='0.06'%3E%3Ccircle cx='30' cy='30' r='4'/%3E%3Ccircle cx='0' cy='0' r='4'/%3E%3Ccircle cx='60' cy='0' r='4'/%3E%3Ccircle cx='0' cy='60' r='4'/%3E%3Ccircle cx='60' cy='60' r='4'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E"); }
+        .empire-title { font-family: 'Playfair Display', serif; font-size: 2.4rem; font-weight: 900; color: #c9a84c; margin: 0 0 4px; letter-spacing: -0.5px; position: relative; }
+        .empire-sub { font-family: 'Source Sans 3', sans-serif; color: #a0a0c0; font-size: 0.95rem; letter-spacing: 0.05em; text-transform: uppercase; position: relative; }
+        .stat-pill { background: rgba(201,168,76,0.15); border: 1px solid rgba(201,168,76,0.3); color: #c9a84c; padding: 6px 16px; border-radius: 20px; font-family: 'Source Sans 3', sans-serif; font-size: 0.85rem; font-weight: 600; display: inline-block; margin-right: 10px; margin-top: 16px; }
+        .tab-bar { background: #fff; border-bottom: 2px solid #e8e0d0; display: flex; padding: 0 32px; }
+        .tab-btn { font-family: 'Playfair Display', serif; font-size: 1rem; font-weight: 700; padding: 16px 24px; border: none; background: none; cursor: pointer; color: #888; border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all 0.2s; letter-spacing: 0.02em; }
+        .tab-btn.active { color: #1a1a2e; border-bottom-color: #c9a84c; }
+        .tab-btn:hover:not(.active) { color: #444; }
+        .content-area { padding: 28px 32px; max-width: 1400px; margin: 0 auto; }
+        .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; align-items: center; justify-content: space-between; }
+        .filter-chip { font-family: 'Source Sans 3', sans-serif; font-size: 0.8rem; padding: 6px 14px; border-radius: 16px; border: 1.5px solid #d4c9a8; background: #fff; cursor: pointer; color: #666; transition: all 0.15s; font-weight: 600; }
+        .filter-chip.active { background: #1a1a2e; color: #c9a84c; border-color: #1a1a2e; }
+        .filter-chip:hover:not(.active) { border-color: #c9a84c; color: #1a1a2e; }
+        .add-btn { font-family: 'Source Sans 3', sans-serif; font-size: 0.85rem; font-weight: 700; padding: 8px 20px; background: #c9a84c; color: #1a1a2e; border: none; border-radius: 8px; cursor: pointer; letter-spacing: 0.03em; transition: all 0.15s; }
+        .add-btn:hover { background: #b8943e; }
+        .app-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px; }
+        .app-card { background: #fff; border-radius: 12px; border: 1px solid #e8e0d0; overflow: hidden; transition: box-shadow 0.2s, transform 0.2s; cursor: pointer; }
+        .app-card:hover { box-shadow: 0 8px 24px rgba(26,26,46,0.1); transform: translateY(-2px); }
+        .app-card-accent { height: 5px; }
+        .app-card-body { padding: 18px 20px 14px; }
+        .app-card-name { font-family: 'Playfair Display', serif; font-size: 1.15rem; font-weight: 700; color: #1a1a2e; margin: 0 0 4px; }
+        .app-card-url { font-family: 'Source Sans 3', sans-serif; font-size: 0.78rem; color: #888; margin: 0 0 10px; }
+        .app-card-desc { font-family: 'Source Sans 3', sans-serif; font-size: 0.88rem; color: #555; line-height: 1.5; margin: 0 0 14px; }
+        .app-card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; flex-wrap: wrap; }
+        .status-badge { font-family: 'Source Sans 3', sans-serif; font-size: 0.72rem; font-weight: 700; padding: 3px 10px; border-radius: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+        .universe-tag { font-family: 'Source Sans 3', sans-serif; font-size: 0.72rem; color: #888; background: #f5f0e8; padding: 3px 10px; border-radius: 10px; }
+        .card-actions { display: flex; gap: 6px; }
+        .icon-btn { background: none; border: none; cursor: pointer; color: #aaa; font-size: 0.85rem; padding: 4px 6px; border-radius: 4px; transition: color 0.15s; }
+        .icon-btn:hover { color: #c9a84c; }
+        .icon-btn.del:hover { color: #c0392b; }
+        .sub-table { width: 100%; border-collapse: collapse; background: #fff; border-radius: 12px; overflow: hidden; border: 1px solid #e8e0d0; }
+        .sub-table th { font-family: 'Source Sans 3', sans-serif; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: #888; background: #faf8f3; padding: 12px 16px; text-align: left; border-bottom: 1px solid #e8e0d0; }
+        .sub-table td { font-family: 'Source Sans 3', sans-serif; font-size: 0.88rem; color: #333; padding: 13px 16px; border-bottom: 1px solid #f0ebe0; vertical-align: middle; }
+        .sub-table tr:last-child td { border-bottom: none; }
+        .sub-table tr:hover td { background: #fdf9f0; }
+        .sub-name { font-weight: 600; color: #1a1a2e; }
+        .sub-cost { font-family: 'Playfair Display', serif; font-weight: 700; color: #2d6a4f; }
+        .sub-free { color: #aaa; font-style: italic; }
+        .sub-notes { color: #777; font-size: 0.82rem; }
+        .cost-total { background: linear-gradient(135deg, #1a2e1a, #2d1b4e); color: #c9a84c; padding: 20px 24px; border-radius: 10px; margin-bottom: 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: gap; gap: 16px; }
+        .cost-total-label { font-family: 'Source Sans 3', sans-serif; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.1em; color: #a0a0c0; margin-bottom: 4px; }
+        .cost-total-amount { font-family: 'Playfair Display', serif; font-size: 2rem; font-weight: 900; }
+        .cost-note { font-family: 'Source Sans 3', sans-serif; font-size: 0.82rem; color: #a0a0c0; max-width: 400px; line-height: 1.5; }
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .modal { background: #fff; border-radius: 14px; padding: 28px; max-width: 520px; width: 100%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+        .modal-title { font-family: 'Playfair Display', serif; font-size: 1.4rem; font-weight: 700; color: #1a1a2e; margin: 0 0 20px; }
+        .form-group { margin-bottom: 16px; }
+        .form-label { font-family: 'Source Sans 3', sans-serif; font-size: 0.8rem; font-weight: 700; color: #555; text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 6px; }
+        .form-input { width: 100%; padding: 10px 14px; border: 1.5px solid #ddd; border-radius: 8px; font-family: 'Source Sans 3', sans-serif; font-size: 0.9rem; color: #333; outline: none; transition: border-color 0.15s; }
+        .form-input:focus { border-color: #c9a84c; }
+        .form-select { width: 100%; padding: 10px 14px; border: 1.5px solid #ddd; border-radius: 8px; font-family: 'Source Sans 3', sans-serif; font-size: 0.9rem; color: #333; outline: none; background: #fff; }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 24px; }
+        .btn-primary { background: #1a1a2e; color: #c9a84c; border: none; padding: 10px 22px; border-radius: 8px; font-family: 'Source Sans 3', sans-serif; font-weight: 700; font-size: 0.9rem; cursor: pointer; transition: background 0.15s; }
+        .btn-primary:hover { background: #2d1b4e; }
+        .btn-ghost { background: none; color: #888; border: 1.5px solid #ddd; padding: 10px 18px; border-radius: 8px; font-family: 'Source Sans 3', sans-serif; font-weight: 600; font-size: 0.9rem; cursor: pointer; }
+        .stack-tag { font-family: 'Source Sans 3', sans-serif; font-size: 0.72rem; color: #888; }
+      `}</style>
+
+      {/* Header */}
+      <div className="empire-header">
+        <div className="empire-title">Empire Command Center</div>
+        <div className="empire-sub">Kari Hoglund Kounkel · CARES · K Co · Freedom Force</div>
+        <div>
+          <span className="stat-pill">🟢 {liveApps} apps live</span>
+          <span className="stat-pill">💰 ${monthlyCost.toFixed(2)}/mo confirmed</span>
+          {verifySubs > 0 && <span className="stat-pill">⚠️ {verifySubs} to verify</span>}
+        </div>
+      </div>
+
+      {/* Tab Bar */}
+      <div className="tab-bar">
+        <button className={`tab-btn ${tab === "empire" ? "active" : ""}`} onClick={() => setTab("empire")}>My Empire</button>
+        <button className={`tab-btn ${tab === "stack" ? "active" : ""}`} onClick={() => setTab("stack")}>My Stack</button>
+        <button className={`tab-btn ${tab === "social" ? "active" : ""}`} onClick={() => setTab("social")}>📣 Social</button>
+      </div>
+
+      <div className="content-area">
+
+        {/* EMPIRE TAB */}
+        {tab === "empire" && (
+          <>
+            <div className="filter-bar">
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {UNIVERSES.map(u => (
+                  <button key={u} className={`filter-chip ${appFilter === u ? "active" : ""}`} onClick={() => setAppFilter(u)}>{u}</button>
+                ))}
+              </div>
+              <button className="add-btn" onClick={() => setShowAddApp(true)}>+ Add App</button>
+            </div>
+
+            <div className="app-grid">
+              {filteredApps.map(app => {
+                const s = STATUS_COLORS[app.status] || STATUS_COLORS.planning;
+                return (
+                  <div key={app.id} className="app-card">
+                    <div className="app-card-accent" style={{ background: app.color }} />
+                    <div className="app-card-body">
+                      <div className="app-card-name">{app.name}</div>
+                      <div className="app-card-url">{app.url}</div>
+                      <div className="app-card-desc">{app.desc}</div>
+                      <div className="app-card-footer">
+                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                          <span className="status-badge" style={{ background: s.bg, color: s.text }}>{s.label}</span>
+                          <span className="universe-tag">{app.universe}</span>
+                        </div>
+                        <div className="card-actions">
+                          <button className="icon-btn" onClick={() => setEditingApp({ ...app })} title="Edit">✏️</button>
+                          <button className="icon-btn del" onClick={() => deleteApp(app.id)} title="Delete">🗑️</button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {/* STACK TAB */}
+        {tab === "stack" && (
+          <>
+            <div className="cost-total">
+              <div>
+                <div className="cost-total-label">Confirmed Monthly Fixed</div>
+                <div className="cost-total-amount">${monthlyCost.toFixed(2)}</div>
+              </div>
+              <div className="cost-note">This is the confirmed floor. "Verify" items plus any forgotten subscriptions are still out there. You know what they say about the ones you set up at midnight.</div>
+            </div>
+
+            <div className="filter-bar">
+              <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                {CATEGORIES.map(c => (
+                  <button key={c} className={`filter-chip ${subFilter === c ? "active" : ""}`} onClick={() => setSubFilter(c)}>{c}</button>
+                ))}
+              </div>
+              <button className="add-btn" onClick={() => setShowAddSub(true)}>+ Add Service</button>
+            </div>
+
+            <table className="sub-table">
+              <thead>
+                <tr>
+                  <th>Service</th>
+                  <th>Category</th>
+                  <th>Cost</th>
+                  <th>Billing</th>
+                  <th>Status</th>
+                  <th>Notes</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredSubs.map(sub => {
+                  const st = SUB_STATUS[sub.status] || SUB_STATUS.active;
+                  return (
+                    <tr key={sub.id}>
+                      <td><span className="sub-name">{sub.name}</span></td>
+                      <td><span className="universe-tag">{sub.category}</span></td>
+                      <td>
+                        {sub.cost > 0
+                          ? <span className="sub-cost">${sub.cost.toFixed(2)}</span>
+                          : <span className="sub-free">free / verify</span>}
+                      </td>
+                      <td style={{ fontFamily: "'Source Sans 3', sans-serif", fontSize: "0.82rem", color: "#888" }}>{sub.billing}</td>
+                      <td><span className="status-badge" style={{ background: st.bg, color: st.text }}>{st.label}</span></td>
+                      <td className="sub-notes">{sub.notes}</td>
+                      <td>
+                        <div className="card-actions">
+                          <button className="icon-btn" onClick={() => setEditingSub({ ...sub })}>✏️</button>
+                          <button className="icon-btn del" onClick={() => deleteSub(sub.id)}>🗑️</button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </>
+        )}
+      </div>
+
+      {/* Edit App Modal */}
+      {editingApp && (
+        <div className="modal-overlay" onClick={() => setEditingApp(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Edit App</div>
+            {["name","url","stack","desc"].map(field => (
+              <div className="form-group" key={field}>
+                <label className="form-label">{field}</label>
+                <input className="form-input" value={editingApp[field]} onChange={e => setEditingApp({...editingApp, [field]: e.target.value})} />
+              </div>
+            ))}
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select className="form-select" value={editingApp.status} onChange={e => setEditingApp({...editingApp, status: e.target.value})}>
+                <option value="live">Live</option>
+                <option value="in-progress">In Progress</option>
+                <option value="planning">Planning</option>
+                <option value="paused">Paused</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Universe</label>
+              <select className="form-select" value={editingApp.universe} onChange={e => setEditingApp({...editingApp, universe: e.target.value})}>
+                {["K Co Creative","CARES Consulting","Freedom Force","The Hub @ Minuteman","The 13th Room","Marbleverse"].map(u => <option key={u}>{u}</option>)}
+              </select>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-ghost" onClick={() => setEditingApp(null)}>Cancel</button>
+              <button className="btn-primary" onClick={saveAppEdit}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Sub Modal */}
+      {editingSub && (
+        <div className="modal-overlay" onClick={() => setEditingSub(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Edit Service</div>
+            {["name","category","url"].map(field => (
+              <div className="form-group" key={field}>
+                <label className="form-label">{field}</label>
+                <input className="form-input" value={editingSub[field]} onChange={e => setEditingSub({...editingSub, [field]: e.target.value})} />
+              </div>
+            ))}
+            <div className="form-group">
+              <label className="form-label">Monthly Cost</label>
+              <input className="form-input" type="number" value={editingSub.cost} onChange={e => setEditingSub({...editingSub, cost: parseFloat(e.target.value) || 0})} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Billing</label>
+              <select className="form-select" value={editingSub.billing} onChange={e => setEditingSub({...editingSub, billing: e.target.value})}>
+                <option value="monthly">Monthly</option>
+                <option value="annual">Annual</option>
+                <option value="per-transaction">Per Transaction</option>
+                <option value="royalty-share">Royalty Share</option>
+                <option value="unknown">Unknown</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select className="form-select" value={editingSub.status} onChange={e => setEditingSub({...editingSub, status: e.target.value})}>
+                <option value="active">Active</option>
+                <option value="verify">Verify</option>
+                <option value="cancel">Cancel?</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Notes</label>
+              <input className="form-input" value={editingSub.notes} onChange={e => setEditingSub({...editingSub, notes: e.target.value})} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-ghost" onClick={() => setEditingSub(null)}>Cancel</button>
+              <button className="btn-primary" onClick={saveSubEdit}>Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add App Modal */}
+      {showAddApp && (
+        <div className="modal-overlay" onClick={() => setShowAddApp(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Add New App</div>
+            {["name","url","stack","desc"].map(field => (
+              <div className="form-group" key={field}>
+                <label className="form-label">{field}</label>
+                <input className="form-input" value={newApp[field]} onChange={e => setNewApp({...newApp, [field]: e.target.value})} placeholder={field} />
+              </div>
+            ))}
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select className="form-select" value={newApp.status} onChange={e => setNewApp({...newApp, status: e.target.value})}>
+                <option value="live">Live</option>
+                <option value="in-progress">In Progress</option>
+                <option value="planning">Planning</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Universe</label>
+              <select className="form-select" value={newApp.universe} onChange={e => setNewApp({...newApp, universe: e.target.value})}>
+                {["K Co Creative","CARES Consulting","Freedom Force","The Hub @ Minuteman","The 13th Room","Marbleverse"].map(u => <option key={u}>{u}</option>)}
+              </select>
+            </div>
+            <div className="modal-actions">
+              <button className="btn-ghost" onClick={() => setShowAddApp(false)}>Cancel</button>
+              <button className="btn-primary" onClick={addApp}>Add App</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Sub Modal */}
+      {showAddSub && (
+        <div className="modal-overlay" onClick={() => setShowAddSub(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-title">Add New Service</div>
+            {["name","category","url"].map(field => (
+              <div className="form-group" key={field}>
+                <label className="form-label">{field}</label>
+                <input className="form-input" value={newSub[field]} onChange={e => setNewSub({...newSub, [field]: e.target.value})} placeholder={field} />
+              </div>
+            ))}
+            <div className="form-group">
+              <label className="form-label">Monthly Cost</label>
+              <input className="form-input" type="number" value={newSub.cost} onChange={e => setNewSub({...newSub, cost: parseFloat(e.target.value) || 0})} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Status</label>
+              <select className="form-select" value={newSub.status} onChange={e => setNewSub({...newSub, status: e.target.value})}>
+                <option value="active">Active</option>
+                <option value="verify">Verify</option>
+                <option value="cancel">Cancel?</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Notes</label>
+              <input className="form-input" value={newSub.notes} onChange={e => setNewSub({...newSub, notes: e.target.value})} />
+            </div>
+            <div className="modal-actions">
+              <button className="btn-ghost" onClick={() => setShowAddSub(false)}>Cancel</button>
+              <button className="btn-primary" onClick={addSub}>Add Service</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ============================================================
 // TAB MANAGER
 // ============================================================
 function TabManager({ tabConfig, onSave, onClose, isPro, onUpgrade }) {
@@ -1900,6 +2446,7 @@ export default function TheEverythingBoard({ user }) {
   const [showUniverseManager, setShowUniverseManager] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showTabManager, setShowTabManager] = useState(false);
+  const [showEmpire, setShowEmpire] = useState(false);
   const [tabConfig, setTabConfig] = useState(() => {
     try { return JSON.parse(localStorage.getItem("everything-board-tab-config") || "{}"); } catch { return {}; }
   });
@@ -1910,7 +2457,8 @@ export default function TheEverythingBoard({ user }) {
     } catch { return BINDER_TABS.map(t => t.id); }
   });
 
-  const isPro = settings.subscription_tier === 'pro';
+  const isPro = settings.subscription_tier === 'pro' || settings.subscription_tier === 'creator';
+  const isCreator = settings.subscription_tier === 'creator';
 
   const visibleTabs = useMemo(() =>
     tabOrder
@@ -1938,6 +2486,10 @@ export default function TheEverythingBoard({ user }) {
     if (params.get('upgraded') === 'true') {
       updateSettings({ subscription_tier: 'pro' });
       setToast("🎉 Welcome to Pro! All 13 universes are yours.");
+    }
+    if (params.get('creator') === 'true') {
+      updateSettings({ subscription_tier: 'creator' });
+      setToast("🏛️ Welcome to Creator! The empire is open.");
       window.history.replaceState({}, '', window.location.pathname);
     }
   }, []);
@@ -2053,7 +2605,9 @@ export default function TheEverythingBoard({ user }) {
             <button onClick={() => addCard(lists[0]?.id)} style={{ padding: "6px 14px", borderRadius: "8px", border: "none", background: "#E8B931", color: "#1A1A1A", fontWeight: 800, cursor: "pointer", fontSize: "11px" }}>+ New Card</button>
           )}
           <button onClick={handleLogout} title="Sign out" style={{ padding: "6px 10px", borderRadius: "8px", border: "1px solid #444", background: "#333", color: "#888", fontWeight: 600, cursor: "pointer", fontSize: "10px", fontFamily: "'DM Sans', sans-serif" }}>Sign Out</button>
-          {isPro
+          {isCreator
+            ? <span style={{ padding: "4px 10px", borderRadius: "8px", background: "#C7366B22", color: "#C7366B", fontSize: "9px", fontWeight: 800, letterSpacing: "1px", border: "1px solid #C7366B44" }}>CREATOR</span>
+            : isPro
             ? <span style={{ padding: "4px 10px", borderRadius: "8px", background: "#E8B93122", color: "#E8B931", fontSize: "9px", fontWeight: 800, letterSpacing: "1px", border: "1px solid #E8B93144" }}>PRO</span>
             : <button onClick={() => setShowUpgrade(true)} style={{ padding: "6px 12px", borderRadius: "8px", border: "none", background: "#E8B931", color: "#1A1A1A", fontWeight: 800, cursor: "pointer", fontSize: "10px" }}>✨ Upgrade</button>
           }
@@ -2086,7 +2640,7 @@ export default function TheEverythingBoard({ user }) {
           draggingId={draggingId} onDragStart={setDraggingId} onDragEnd={() => setDraggingId(null)} onBack={handleGoHome} universes={universes} />
       ) : isDashboard ? (
         viewMode === "circles" ? (
-          <CircleDashboard cards={cards} onSelectUniverse={handleSelectUniverse} onSwitchTab={(id) => { setActiveTab(id); setUniverseView(null); setSearchTerm(""); }} universes={universes} onManageUniverses={() => setShowUniverseManager(true)} />
+          <CircleDashboard cards={cards} onSelectUniverse={handleSelectUniverse} onSwitchTab={(id) => { setActiveTab(id); setUniverseView(null); setSearchTerm(""); }} universes={universes} onManageUniverses={() => setShowUniverseManager(true)} onOpenEmpire={() => isCreator ? setShowEmpire(true) : setShowUpgrade(true)} isCreator={isCreator} />
         ) : (
           <ClassicDashboard cards={cards} onSwitchTab={(id) => { setActiveTab(id); setUniverseView(null); setSearchTerm(""); }} />
         )
@@ -2105,6 +2659,17 @@ export default function TheEverythingBoard({ user }) {
       {editing && <CardEditor card={editing} onSave={saveCard} onDelete={deleteCard} onClose={() => setEditing(null)} currentTab={activeTab} allCards={cards} universes={universes} />}
       {toast && <AutoToast message={toast} onDone={() => setToast(null)} />}
       {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+      {showEmpire && (
+        <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9998, display: "flex", flexDirection: "column" }}>
+          <div style={{ background: "#1A1A1A", padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <span style={{ color: "#E8B931", fontWeight: 800, fontFamily: "'Playfair Display', serif", fontSize: "1.1rem" }}>🏛️ Empire Command Center</span>
+            <button onClick={() => setShowEmpire(false)} style={{ background: "none", border: "1px solid #444", color: "#aaa", padding: "6px 14px", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: 700 }}>✕ Close</button>
+          </div>
+          <div style={{ flex: 1, overflowY: "auto" }}>
+            <EmpireCommandCenter />
+          </div>
+        </div>
+      )}
       {showTabManager && (
         <TabManager
           tabConfig={tabConfig}
