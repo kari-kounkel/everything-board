@@ -543,7 +543,7 @@ function ChecklistWidget({ items, onChange }) {
   );
 }
 
-function CardEditor({ card, onSave, onDelete, onClose, currentTab, allCards, universes }) {
+function CardEditor({ card, onSave, onDelete, onClose, currentTab, allCards, universes, isCreator, empireApps }) {
   const [form, setForm] = useState({ ...card, checklist: card.checklist || [], universes: getUniverses(card), links: card.links || [] });
   const [linkSearch, setLinkSearch] = useState("");
   const [linkType, setLinkType] = useState("related");
@@ -664,6 +664,56 @@ function CardEditor({ card, onSave, onDelete, onClose, currentTab, allCards, uni
             </div>
           )}
         </div>
+
+        {/* EMPIRE FIELDS — Creator only */}
+        {isCreator && (
+          <div style={{ marginBottom: "14px", background: "#FAF5FF", borderRadius: "10px", padding: "12px 14px", border: "1.5px solid #C7366B22" }}>
+            <div style={{ fontSize: "10px", fontWeight: 800, color: "#C7366B", textTransform: "uppercase", letterSpacing: "1px", marginBottom: "10px" }}>🏛️ Empire</div>
+
+            {/* Empire App link */}
+            <div style={{ marginBottom: "10px" }}>
+              <label style={{ fontSize: "10px", fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Part of an app?</label>
+              <select value={form.empireApp || ""} onChange={e => set("empireApp", e.target.value || null)}
+                style={{ display: "block", marginTop: "5px", width: "100%", padding: "7px 10px", borderRadius: "8px", border: "1px solid #E8E3D8", background: "#FDFCF6", fontSize: "12px", fontFamily: "'DM Sans', sans-serif", color: "#333", outline: "none" }}>
+                <option value="">— Not an empire card —</option>
+                {(empireApps || []).map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </div>
+
+            {/* Social campaign */}
+            <div style={{ marginBottom: "10px" }}>
+              <label style={{ fontSize: "10px", fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Social campaign?</label>
+              <div style={{ display: "flex", gap: "6px", marginTop: "5px", flexWrap: "wrap" }}>
+                {["Facebook","Instagram","LinkedIn","Substack","YouTube"].map(p => {
+                  const active = (form.socialPlatforms || []).includes(p);
+                  const colors = { Facebook:"#1877F2", Instagram:"#E1306C", LinkedIn:"#0A66C2", Substack:"#FF6719", YouTube:"#FF0000" };
+                  return (
+                    <button key={p} onClick={() => {
+                      const cur = form.socialPlatforms || [];
+                      set("socialPlatforms", active ? cur.filter(x => x !== p) : [...cur, p]);
+                    }} style={{ padding: "4px 10px", borderRadius: "6px", border: "2px solid", borderColor: active ? colors[p] : "transparent", background: active ? colors[p] + "18" : "#F0EDE4", color: active ? colors[p] : "#888", fontSize: "10px", fontWeight: 700, cursor: "pointer" }}>
+                      {p}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Subscription */}
+            <div>
+              <label style={{ fontSize: "10px", fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Is this a subscription?</label>
+              <div style={{ display: "flex", gap: "8px", marginTop: "5px", alignItems: "center" }}>
+                <button onClick={() => set("isSubscription", !form.isSubscription)} style={{ padding: "5px 14px", borderRadius: "8px", border: "2px solid", borderColor: form.isSubscription ? "#8B6D3F" : "transparent", background: form.isSubscription ? "#E8B93118" : "#F0EDE4", color: form.isSubscription ? "#8B6D3F" : "#888", fontSize: "11px", fontWeight: 700, cursor: "pointer" }}>
+                  {form.isSubscription ? "💳 Yes" : "No"}
+                </button>
+                {form.isSubscription && (
+                  <input value={form.subscriptionCost || ""} onChange={e => set("subscriptionCost", e.target.value)}
+                    placeholder="$0/mo" style={{ width: "90px", padding: "5px 8px", borderRadius: "6px", border: "1px solid #E8E3D8", fontSize: "12px", fontFamily: "'DM Sans', sans-serif", background: "#FDFCF6", outline: "none" }} />
+                )}
+              </div>
+            </div>
+          </div>
+        )}
         <ChecklistWidget items={form.checklist || []} onChange={v => set("checklist", v)} />
         <div style={{ display: "flex", justifyContent: "space-between", marginTop: "24px", paddingTop: "16px", borderTop: "1px solid #E8E3D8" }}>
           {card.id && (<button onClick={() => { onDelete(card.id); onClose(); }} style={{ padding: "8px 16px", borderRadius: "10px", border: "none", background: "#D4644E15", color: "#D4644E", fontWeight: 700, cursor: "pointer", fontSize: "12px" }}>🗑 Delete</button>)}
@@ -2261,6 +2311,7 @@ export default function TheEverythingBoard({ user }) {
 
   const isPro = settings.subscription_tier === 'pro' || settings.subscription_tier === 'creator';
   const isCreator = settings.subscription_tier === 'creator';
+  const { apps } = useEmpireApps(isCreator ? user.id : null);
 
   const visibleTabs = useMemo(() =>
     tabOrder
@@ -2458,7 +2509,7 @@ export default function TheEverythingBoard({ user }) {
       )}
 
       {(!isDashboard || showUniverseView) && viewMode === "circles" && <HomeMarble onClick={handleGoHome} />}
-      {editing && <CardEditor card={editing} onSave={saveCard} onDelete={deleteCard} onClose={() => setEditing(null)} currentTab={activeTab} allCards={cards} universes={universes} />}
+      {editing && <CardEditor card={editing} onSave={saveCard} onDelete={deleteCard} onClose={() => setEditing(null)} currentTab={activeTab} allCards={cards} universes={universes} isCreator={isCreator} empireApps={apps} />}
       {toast && <AutoToast message={toast} onDone={() => setToast(null)} />}
       {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
       {showEmpire && (
