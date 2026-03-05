@@ -427,7 +427,7 @@ function parseImportCSV(text, universes) {
     if (!title) continue;
 
     // Parse board
-    let tab = "braindumps";
+    let tab = "projects";
     if (boardIdx >= 0 && cols[boardIdx]) {
       const boardStr = cols[boardIdx].toLowerCase();
       const found = BINDER_TABS.find(t =>
@@ -2380,7 +2380,7 @@ export default function TheEverythingBoard({ user }) {
 
   const addCard = (listId) => {
     setEditing({
-      id: "", title: "", description: "", tab: activeTab === "dashboard" ? "braindumps" : activeTab,
+      id: "", title: "", description: "", tab: (activeTab === "dashboard" || activeTab === "mastertodo") ? "projects" : activeTab,
       list: listId, labels: [], universes: universeView ? [universeView] : [], dueDate: "", checklist: [], created: now(), moved: now(), completedAt: null,
     });
   };
