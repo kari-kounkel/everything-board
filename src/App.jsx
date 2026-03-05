@@ -1754,6 +1754,135 @@ function UniverseManager({ universes, onSave, onClose, cards }) {
 }
 
 // ============================================================
+// TAB MANAGER
+// ============================================================
+function TabManager({ tabConfig, onSave, onClose, isPro, onUpgrade }) {
+  const [tabs, setTabs] = useState(() =>
+    BINDER_TABS.map(t => ({
+      ...t,
+      label: (tabConfig[t.id]?.label) || t.title,
+      hidden: (tabConfig[t.id]?.hidden) || false,
+    }))
+  );
+  const [dragging, setDragging] = useState(null);
+  const [dragOver, setDragOver] = useState(null);
+
+  const update = (id, field, val) =>
+    setTabs(prev => prev.map(t => t.id === id ? { ...t, [field]: val } : t));
+
+  const handleDragStart = (e, idx) => { setDragging(idx); e.dataTransfer.effectAllowed = "move"; };
+  const handleDragOver = (e, idx) => { e.preventDefault(); setDragOver(idx); };
+  const handleDrop = (e, idx) => {
+    e.preventDefault();
+    if (dragging === null || dragging === idx) { setDragging(null); setDragOver(null); return; }
+    const reordered = [...tabs];
+    const [moved] = reordered.splice(dragging, 1);
+    reordered.splice(idx, 0, moved);
+    setTabs(reordered);
+    setDragging(null); setDragOver(null);
+  };
+
+  const handleSave = () => {
+    const config = {};
+    tabs.forEach(t => { config[t.id] = { label: t.label, hidden: t.hidden, order: tabs.indexOf(t) }; });
+    onSave(config, tabs.map(t => t.id));
+  };
+
+  const visibleCount = tabs.filter(t => !t.hidden).length;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", zIndex: 9999, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }}>
+      <div style={{ background: "#FEFCF6", borderRadius: "20px", width: "100%", maxWidth: "560px", maxHeight: "85vh", display: "flex", flexDirection: "column", boxShadow: "0 24px 80px rgba(0,0,0,0.3)", fontFamily: "'DM Sans', sans-serif", overflow: "hidden" }}>
+        {/* Header */}
+        <div style={{ padding: "24px 28px 16px", borderBottom: "1px solid #EAE6DC", display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexShrink: 0 }}>
+          <div>
+            <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: "1.4rem", fontWeight: 900, color: "#1A1A1A", margin: "0 0 4px" }}>⚙️ Tab Manager</h2>
+            <p style={{ color: "#888", fontSize: "0.8rem", margin: 0 }}>Rename, reorder, or hide tabs. Drag to rearrange. <span style={{ color: "#5B8C5A" }}>{visibleCount} visible</span></p>
+          </div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#aaa", marginTop: "2px" }}>×</button>
+        </div>
+
+        {/* Tab List */}
+        <div style={{ overflowY: "auto", flex: 1, padding: "16px 24px" }}>
+          {tabs.map((tab, idx) => (
+            <div
+              key={tab.id}
+              draggable
+              onDragStart={e => handleDragStart(e, idx)}
+              onDragOver={e => handleDragOver(e, idx)}
+              onDrop={e => handleDrop(e, idx)}
+              onDragEnd={() => { setDragging(null); setDragOver(null); }}
+              style={{
+                display: "flex", alignItems: "center", gap: "10px", padding: "10px 12px",
+                marginBottom: "6px", borderRadius: "10px", cursor: "grab",
+                background: dragOver === idx ? "#F0EDE4" : tab.hidden ? "#F8F6F0" : "#FFF",
+                border: `1.5px solid ${dragOver === idx ? tab.color : tab.hidden ? "#E5E0D0" : "#EAE6DC"}`,
+                opacity: tab.hidden ? 0.55 : 1,
+                transition: "all 0.12s ease",
+              }}
+            >
+              {/* Drag handle */}
+              <span style={{ color: "#ccc", fontSize: "14px", userSelect: "none", cursor: "grab" }}>⠿</span>
+
+              {/* Tab color bar */}
+              <div style={{ width: "4px", height: "32px", borderRadius: "2px", background: tab.color, flexShrink: 0 }} />
+
+              {/* Emoji + Name */}
+              <span style={{ fontSize: "16px" }}>{tab.emoji}</span>
+              <input
+                value={tab.label}
+                onChange={e => update(tab.id, "label", e.target.value)}
+                disabled={!isPro}
+                style={{
+                  flex: 1, border: "none", borderBottom: isPro ? "1px solid #E0D8C8" : "none",
+                  padding: "3px 4px", fontSize: "13px", fontWeight: 600, color: "#1A1A1A",
+                  background: "transparent", outline: "none", fontFamily: "'DM Sans', sans-serif",
+                  cursor: isPro ? "text" : "default",
+                }}
+                title={isPro ? "Rename this tab" : "Pro feature — upgrade to rename tabs"}
+              />
+
+              {/* Original name badge if renamed */}
+              {tab.label !== tab.title && (
+                <span style={{ fontSize: "9px", color: "#888", background: "#F0EDE4", padding: "2px 6px", borderRadius: "4px", whiteSpace: "nowrap" }}>
+                  was: {tab.title}
+                </span>
+              )}
+
+              {/* Hide toggle */}
+              <button
+                onClick={() => { if (!isPro) { onUpgrade(); return; } update(tab.id, "hidden", !tab.hidden); }}
+                title={tab.hidden ? "Show this tab" : "Hide this tab"}
+                style={{
+                  background: tab.hidden ? "#E5E0D0" : "#F0EDE4", border: "none", borderRadius: "6px",
+                  padding: "4px 8px", fontSize: "10px", cursor: "pointer", fontWeight: 700,
+                  color: tab.hidden ? "#888" : "#5B8C5A", whiteSpace: "nowrap",
+                }}
+              >
+                {tab.hidden ? "🙈 Hidden" : "👁 Visible"}
+              </button>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div style={{ padding: "16px 28px 20px", borderTop: "1px solid #EAE6DC", display: "flex", gap: "10px", justifyContent: "flex-end", flexShrink: 0 }}>
+          {!isPro && (
+            <div style={{ flex: 1, display: "flex", alignItems: "center" }}>
+              <span style={{ fontSize: "11px", color: "#888" }}>✨ <button onClick={onUpgrade} style={{ background: "none", border: "none", color: "#E8B931", fontWeight: 800, cursor: "pointer", fontSize: "11px", padding: 0 }}>Upgrade to Pro</button> to rename, reorder &amp; hide tabs</span>
+            </div>
+          )}
+          <button onClick={onClose} style={{ padding: "10px 20px", borderRadius: "10px", border: "1.5px solid #E0D8C8", background: "transparent", color: "#888", fontWeight: 700, cursor: "pointer", fontSize: "12px" }}>Cancel</button>
+          {isPro && (
+            <button onClick={handleSave} style={{ padding: "10px 24px", borderRadius: "10px", border: "none", background: "#1A1A1A", color: "#E8B931", fontWeight: 800, cursor: "pointer", fontSize: "12px" }}>Save Changes</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
 // MAIN APP
 // ============================================================
 export default function TheEverythingBoard({ user }) {
@@ -1770,8 +1899,38 @@ export default function TheEverythingBoard({ user }) {
   const [universeView, setUniverseView] = useState(null);
   const [showUniverseManager, setShowUniverseManager] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [showTabManager, setShowTabManager] = useState(false);
+  const [tabConfig, setTabConfig] = useState(() => {
+    try { return JSON.parse(localStorage.getItem("everything-board-tab-config") || "{}"); } catch { return {}; }
+  });
+  const [tabOrder, setTabOrder] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("everything-board-tab-order") || "null");
+      return saved || BINDER_TABS.map(t => t.id);
+    } catch { return BINDER_TABS.map(t => t.id); }
+  });
 
   const isPro = settings.subscription_tier === 'pro';
+
+  const visibleTabs = useMemo(() =>
+    tabOrder
+      .map(id => BINDER_TABS.find(t => t.id === id))
+      .filter(Boolean)
+      .filter(t => !tabConfig[t.id]?.hidden)
+      .map(t => ({ ...t, title: tabConfig[t.id]?.label || t.title })),
+    [tabOrder, tabConfig]
+  );
+
+  const handleSaveTabConfig = (newConfig, newOrder) => {
+    setTabConfig(newConfig);
+    setTabOrder(newOrder);
+    try {
+      localStorage.setItem("everything-board-tab-config", JSON.stringify(newConfig));
+      localStorage.setItem("everything-board-tab-order", JSON.stringify(newOrder));
+    } catch {}
+    setShowTabManager(false);
+    setToast("Tabs updated. Your board, your rules.");
+  };
 
   // Check for Stripe success redirect
   useEffect(() => {
@@ -1886,6 +2045,7 @@ export default function TheEverythingBoard({ user }) {
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <CSVToolbar cards={cards} onImport={handleImport} onToast={setToast} universes={universes} isPro={isPro} onUpgrade={() => setShowUpgrade(true)} />
+          <button onClick={() => setShowTabManager(true)} title="Manage tabs" style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #444", background: "#333", color: "#E6E2D8", fontWeight: 700, cursor: "pointer", fontSize: "11px", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: "5px" }}>⚙️ Tabs</button>
           <ViewToggle view={viewMode} onToggle={toggleView} />
           <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="🔍 Search..."
             style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #333", background: "#2A2A2A", color: "#E6E2D8", fontSize: "11px", fontFamily: "'DM Sans', sans-serif", outline: "none", width: "160px" }} />
@@ -1902,7 +2062,7 @@ export default function TheEverythingBoard({ user }) {
 
       {!showUniverseView && (viewMode === "tabs" || !isDashboard) && (
         <div style={{ background: "#2A2520", padding: "0 12px", overflowX: "auto", display: "flex", alignItems: "stretch", scrollbarWidth: "none" }}>
-          {BINDER_TABS.map(tab => {
+          {visibleTabs.map(tab => {
             const isActive = activeTab === tab.id;
             const count = cards.filter(c => c.tab === tab.id).length;
             return (
@@ -1945,6 +2105,15 @@ export default function TheEverythingBoard({ user }) {
       {editing && <CardEditor card={editing} onSave={saveCard} onDelete={deleteCard} onClose={() => setEditing(null)} currentTab={activeTab} allCards={cards} universes={universes} />}
       {toast && <AutoToast message={toast} onDone={() => setToast(null)} />}
       {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+      {showTabManager && (
+        <TabManager
+          tabConfig={tabConfig}
+          onSave={handleSaveTabConfig}
+          onClose={() => setShowTabManager(false)}
+          isPro={isPro}
+          onUpgrade={() => { setShowTabManager(false); setShowUpgrade(true); }}
+        />
+      )}
       {showUniverseManager && (
         <UniverseManager universes={universes} cards={cards}
           onSave={async (nu) => { await saveUniversesToDb(nu); setToast(`Universes updated — ${nu.length} marble${nu.length !== 1 ? "s" : ""} in the bag.`); }}
