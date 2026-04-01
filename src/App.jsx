@@ -44,16 +44,13 @@ const TODO_DAYS = [
 
 const LABELS = [
   { id: "urgent", name: "Urgent", color: "#D4644E" },
+  { id: "pending", name: "Pending", color: "#E07B39" },
   { id: "inprog", name: "In Progress", color: "#E8B931" },
-  { id: "review", name: "Ready for Review", color: "#5B8C5A" },
-  { id: "scheduled", name: "Scheduled", color: "#4A6FA5" },
   { id: "needsinput", name: "Needs Input", color: "#6B5B8A" },
-  { id: "waiting", name: "Waiting On", color: "#E07B39" },
-  { id: "backlog", name: "Backlog", color: "#999" },
-  { id: "writing", name: "Writing", color: "#9B2335" },
-  { id: "editing", name: "Editing", color: "#C7548E" },
-  { id: "design", name: "Design", color: "#3A7D7B" },
-  { id: "published", name: "Published", color: "#2D6A9F" },
+  { id: "readytolaunch", name: "Ready to Launch", color: "#5B8C5A" },
+  { id: "scheduled", name: "Scheduled", color: "#4A6FA5" },
+  { id: "delegated", name: "Delegated", color: "#3A7D7B" },
+  { id: "done", name: "Done", color: "#999" },
 ];
 
 const LINK_TYPES = [
