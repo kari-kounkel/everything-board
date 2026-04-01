@@ -26,7 +26,12 @@ const BINDER_TABS = [
 const STATUS_LISTS = [
   { id: "focus", title: "✨ This Week's Focus", color: "#E8B931" },
   { id: "inprogress", title: "🛠 In Progress", color: "#E07B39" },
-  { id: "brainstorm", title: "🧠 Brainstorm", color: "#6B5B8A" },
+  { id: "pending", title: "⏳ Pending", color: "#C7548E" },
+  { id: "needsinput", title: "🙋 Needs Input", color: "#6B5B8A" },
+  { id: "readytolaunch", title: "🚀 Ready to Launch", color: "#5B8C5A" },
+  { id: "scheduled", title: "📅 Scheduled", color: "#4A6FA5" },
+  { id: "delegated", title: "👥 Delegated", color: "#3A7D7B" },
+  { id: "brainstorm", title: "🧠 Brainstorm", color: "#9B2335" },
   { id: "onice", title: "🧊 On Ice", color: "#7B8FB2" },
   { id: "complete", title: "✅ Complete", color: "#5B8C5A" },
 ];
@@ -603,16 +608,6 @@ function CardEditor({ card, onSave, onDelete, onClose, currentTab, allCards, uni
             ); })}
           </div>
           {(form.universes || []).length > 1 && <div style={{ fontSize: "9px", color: "#B0A890", fontStyle: "italic", marginTop: "4px" }}>This card lives in {(form.universes || []).length} universes — it's a Venn diagram kind of card.</div>}
-        </div>
-        {/* STATUSES — multi-select */}
-        <div style={{ marginBottom: "14px" }}>
-          <label style={{ fontSize: "10px", fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Tags <span style={{ fontWeight: 400, fontStyle: "italic", textTransform: "none", letterSpacing: 0 }}> — pick all that apply</span></label>
-          <div style={{ display: "flex", gap: "5px", marginTop: "6px", flexWrap: "wrap" }}>
-            {LABELS.map(l => { const active = (form.labels || []).includes(l.id); return (
-              <button key={l.id} onClick={() => toggleLabel(l.id)} style={{ padding: "5px 12px", borderRadius: "20px", border: "2px solid", borderColor: active ? l.color : "transparent", background: active ? l.color + "22" : "#F0EDE4", color: active ? l.color : "#888", fontSize: "11px", fontWeight: 700, cursor: "pointer", transition: "all 0.15s ease" }}>{l.name}</button>
-            ); })}
-          </div>
-          {(form.labels || []).length > 0 && <div style={{ fontSize: "9px", color: "#B0A890", fontStyle: "italic", marginTop: "4px" }}>{(form.labels || []).length} status{(form.labels || []).length > 1 ? "es" : ""} selected</div>}
         </div>
         {/* DUE DATE */}
         <div style={{ marginBottom: "14px" }}>
