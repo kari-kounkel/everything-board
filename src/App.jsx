@@ -784,6 +784,187 @@ function MiniCard({ card, onEdit, isDragging, onDragStart, onDragEnd, tabColor, 
   );
 }
 
+// ============================================================
+// MASTER LIST — flat draggable inline-editable view
+// ============================================================
+function MasterList({ cards, onSave, onDelete, universes }) {
+  const [items, setItems] = useState(cards);
+  const [dragIdx, setDragIdx] = useState(null);
+  const [dragOverIdx, setDragOverIdx] = useState(null);
+  const [editingField, setEditingField] = useState(null); // {id, field}
+
+  useEffect(() => { setItems(cards); }, [cards]);
+
+  const uMap = {};
+  universes.forEach(u => { uMap[u.id] = u; });
+
+  const handleDragStart = (e, idx) => { setDragIdx(idx); e.dataTransfer.effectAllowed = "move"; };
+  const handleDragOver = (e, idx) => { e.preventDefault(); setDragOverIdx(idx); };
+  const handleDrop = (e, idx) => {
+    e.preventDefault();
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
+    const reordered = [...items];
+    const [moved] = reordered.splice(dragIdx, 1);
+    reordered.splice(idx, 0, moved);
+    setItems(reordered);
+    setDragIdx(null); setDragOverIdx(null);
+  };
+
+  const updateCard = async (card, field, value) => {
+    const updated = { ...card, [field]: value };
+    await onSave(updated);
+    setEditingField(null);
+  };
+
+  const statusColor = (list) => {
+    const s = STATUS_LISTS.find(s => s.id === list);
+    return s ? s.color : "#999";
+  };
+
+  const statusTitle = (list) => {
+    const s = STATUS_LISTS.find(s => s.id === list);
+    return s ? s.title : list;
+  };
+
+  return (
+    <div style={{ padding: "16px 20px", fontFamily: "'DM Sans', sans-serif" }}>
+      <div style={{ marginBottom: "12px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div>
+          <span style={{ fontFamily: "'Playfair Display', serif", fontSize: "20px", fontWeight: 900, color: "#1A1A1A" }}>👑 Master List</span>
+          <span style={{ fontSize: "12px", color: "#888", marginLeft: "10px" }}>{items.length} cards — drag to reorder, click to edit</span>
+        </div>
+      </div>
+
+      {/* Header row */}
+      <div style={{ display: "grid", gridTemplateColumns: "28px 2fr 1fr 1fr 1fr 80px 40px", gap: "8px", padding: "6px 10px", background: "#2A2520", borderRadius: "6px", marginBottom: "6px" }}>
+        {["", "Title", "Board", "Status", "Universes", "Due", ""].map((h, i) => (
+          <div key={i} style={{ fontSize: "9px", fontWeight: 800, color: "#888", textTransform: "uppercase", letterSpacing: "0.8px" }}>{h}</div>
+        ))}
+      </div>
+
+      {items.map((card, idx) => {
+        const isEditingTitle = editingField?.id === card.id && editingField?.field === "title";
+        const isEditingStatus = editingField?.id === card.id && editingField?.field === "list";
+        const isEditingBoard = editingField?.id === card.id && editingField?.field === "tab";
+        const isEditingDue = editingField?.id === card.id && editingField?.field === "dueDate";
+        const cardUniverses = (card.universes || []).map(uid => uMap[uid]).filter(Boolean);
+        const isOverdue = card.dueDate && new Date(card.dueDate) < new Date() && card.list !== "complete" && card.list !== "done";
+
+        return (
+          <div
+            key={card.id}
+            draggable
+            onDragStart={e => handleDragStart(e, idx)}
+            onDragOver={e => handleDragOver(e, idx)}
+            onDrop={e => handleDrop(e, idx)}
+            onDragEnd={() => { setDragIdx(null); setDragOverIdx(null); }}
+            style={{
+              display: "grid",
+              gridTemplateColumns: "28px 2fr 1fr 1fr 1fr 80px 40px",
+              gap: "8px",
+              padding: "7px 10px",
+              marginBottom: "3px",
+              borderRadius: "8px",
+              background: dragOverIdx === idx ? "#F0EDE4" : "#FDFCF6",
+              border: "1px solid",
+              borderColor: dragOverIdx === idx ? "#C9A84C" : "#EAE6DC",
+              borderLeft: "3px solid " + statusColor(card.list),
+              cursor: "grab",
+              alignItems: "center",
+              transition: "all 0.1s ease",
+              opacity: dragIdx === idx ? 0.4 : 1,
+            }}
+          >
+            {/* Drag handle */}
+            <span style={{ color: "#ccc", fontSize: "14px", cursor: "grab", userSelect: "none", textAlign: "center" }}>⠿</span>
+
+            {/* Title */}
+            <div onClick={() => setEditingField({ id: card.id, field: "title" })} style={{ cursor: "text" }}>
+              {isEditingTitle ? (
+                <input
+                  autoFocus
+                  defaultValue={card.title}
+                  onBlur={e => updateCard(card, "title", e.target.value)}
+                  onKeyDown={e => { if (e.key === "Enter") e.target.blur(); if (e.key === "Escape") setEditingField(null); }}
+                  style={{ width: "100%", border: "none", borderBottom: "2px solid #E8B931", background: "transparent", fontSize: "13px", fontWeight: 700, fontFamily: "'DM Sans', sans-serif", outline: "none", color: "#1A1A1A" }}
+                />
+              ) : (
+                <span style={{ fontSize: "13px", fontWeight: 600, color: "#1A1A1A", fontFamily: "'Playfair Display', serif" }}>{card.title}</span>
+              )}
+            </div>
+
+            {/* Board */}
+            <div onClick={() => setEditingField({ id: card.id, field: "tab" })} style={{ cursor: "pointer" }}>
+              {isEditingBoard ? (
+                <select autoFocus defaultValue={card.tab}
+                  onBlur={e => updateCard(card, "tab", e.target.value)}
+                  onChange={e => updateCard(card, "tab", e.target.value)}
+                  style={{ fontSize: "10px", border: "1px solid #E8B931", borderRadius: "4px", background: "#fff", padding: "2px 4px", fontFamily: "'DM Sans', sans-serif" }}>
+                  {BINDER_TABS.filter(t => t.id !== "dashboard" && t.id !== "mastertodo").map(t => (
+                    <option key={t.id} value={t.id}>{t.emoji} {t.title}</option>
+                  ))}
+                </select>
+              ) : (
+                <span style={{ fontSize: "10px", color: "#888", background: "#F0EDE4", padding: "2px 7px", borderRadius: "4px" }}>
+                  {BINDER_TABS.find(t => t.id === card.tab)?.title || card.tab}
+                </span>
+              )}
+            </div>
+
+            {/* Status */}
+            <div onClick={() => setEditingField({ id: card.id, field: "list" })} style={{ cursor: "pointer" }}>
+              {isEditingStatus ? (
+                <select autoFocus defaultValue={card.list}
+                  onBlur={e => updateCard(card, "list", e.target.value)}
+                  onChange={e => updateCard(card, "list", e.target.value)}
+                  style={{ fontSize: "10px", border: "1px solid #E8B931", borderRadius: "4px", background: "#fff", padding: "2px 4px", fontFamily: "'DM Sans', sans-serif" }}>
+                  {STATUS_LISTS.map(s => (
+                    <option key={s.id} value={s.id}>{s.title}</option>
+                  ))}
+                </select>
+              ) : (
+                <span style={{ fontSize: "10px", fontWeight: 700, color: statusColor(card.list), background: statusColor(card.list) + "18", padding: "2px 7px", borderRadius: "4px", whiteSpace: "nowrap" }}>
+                  {statusTitle(card.list)}
+                </span>
+              )}
+            </div>
+
+            {/* Universes */}
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "3px" }}>
+              {cardUniverses.slice(0, 2).map(u => (
+                <span key={u.id} style={{ fontSize: "9px", fontWeight: 700, color: "#fff", background: u.color, padding: "1px 6px", borderRadius: "3px" }}>{u.name}</span>
+              ))}
+            </div>
+
+            {/* Due date */}
+            <div onClick={() => setEditingField({ id: card.id, field: "dueDate" })} style={{ cursor: "pointer" }}>
+              {isEditingDue ? (
+                <input type="date" autoFocus defaultValue={card.dueDate || ""}
+                  onBlur={e => updateCard(card, "dueDate", e.target.value)}
+                  style={{ fontSize: "10px", border: "1px solid #E8B931", borderRadius: "4px", padding: "2px 4px", fontFamily: "'DM Sans', sans-serif" }} />
+              ) : (
+                <span style={{ fontSize: "10px", color: isOverdue ? "#D4644E" : "#888", fontWeight: isOverdue ? 700 : 400 }}>
+                  {card.dueDate ? new Date(card.dueDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "—"}
+                </span>
+              )}
+            </div>
+
+            {/* Delete */}
+            <button onClick={() => { if (window.confirm("Delete this card?")) onDelete(card.id); }}
+              style={{ background: "none", border: "none", color: "#ccc", cursor: "pointer", fontSize: "16px", padding: "0", textAlign: "center" }}>×</button>
+          </div>
+        );
+      })}
+
+      {items.length === 0 && (
+        <div style={{ textAlign: "center", padding: "60px 20px", color: "#888", fontStyle: "italic", fontSize: "14px" }}>
+          No cards here yet. Import some or add them from any board.
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ListColumn({ list, cards, onEdit, onDelete, onDrop, draggingId, onDragStart, onDragEnd, onAddCard, tabColor, universes }) {
   const [dragOver, setDragOver] = useState(false);
   return (
@@ -2493,6 +2674,8 @@ export default function TheEverythingBoard({ user }) {
         ) : (
           <ClassicDashboard cards={cards} onSwitchTab={(id) => { setActiveTab(id); setUniverseView(null); setSearchTerm(""); }} />
         )
+      ) : isTodo ? (
+        <MasterList cards={cards} onSave={saveCard} onDelete={deleteCard} universes={universes} />
       ) : (
         <div style={{ display: "flex", gap: "12px", padding: "16px 16px", overflowX: "auto", alignItems: "flex-start" }}>
           {lists.map(list => (
