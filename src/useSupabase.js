@@ -177,7 +177,8 @@ export function useUserSettings(userId) {
       setSettingsState({ 
         onboarded: data.onboarded, 
         view_mode: data.view_mode,
-        subscription_tier: data.subscription_tier || 'free'
+        subscription_tier: data.subscription_tier || 'free',
+        tab_config: data.tab_config || null,
       })
     } else {
       // Create settings row for new user

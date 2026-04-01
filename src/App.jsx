@@ -2299,15 +2299,17 @@ export default function TheEverythingBoard({ user }) {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showTabManager, setShowTabManager] = useState(false);
   const [showEmpire, setShowEmpire] = useState(false);
-  const [tabConfig, setTabConfig] = useState(() => {
-    try { return JSON.parse(localStorage.getItem("everything-board-tab-config") || "{}"); } catch { return {}; }
-  });
-  const [tabOrder, setTabOrder] = useState(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem("everything-board-tab-order") || "null");
-      return saved || BINDER_TABS.map(t => t.id);
-    } catch { return BINDER_TABS.map(t => t.id); }
-  });
+  const [tabConfig, setTabConfig] = useState({});
+  const [tabOrder, setTabOrder] = useState(BINDER_TABS.map(t => t.id));
+
+  // Load tab config from Supabase once settings are ready
+  useEffect(() => {
+    if (settings.tab_config) {
+      const saved = settings.tab_config;
+      setTabConfig(saved.config || {});
+      setTabOrder(saved.order || BINDER_TABS.map(t => t.id));
+    }
+  }, [settings.tab_config]);
 
   const isPro = settings.subscription_tier === 'pro' || settings.subscription_tier === 'creator';
   const isCreator = settings.subscription_tier === 'creator';
@@ -2325,10 +2327,7 @@ export default function TheEverythingBoard({ user }) {
   const handleSaveTabConfig = (newConfig, newOrder) => {
     setTabConfig(newConfig);
     setTabOrder(newOrder);
-    try {
-      localStorage.setItem("everything-board-tab-config", JSON.stringify(newConfig));
-      localStorage.setItem("everything-board-tab-order", JSON.stringify(newOrder));
-    } catch {}
+    updateSettings({ tab_config: { config: newConfig, order: newOrder } });
     setShowTabManager(false);
     setToast("Tabs updated. Your board, your rules.");
   };
