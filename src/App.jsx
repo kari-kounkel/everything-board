@@ -43,14 +43,16 @@ const TODO_DAYS = [
 ];
 
 const LABELS = [
-  { id: "urgent", name: "Urgent", color: "#D4644E" },
-  { id: "pending", name: "Pending", color: "#E07B39" },
-  { id: "inprog", name: "In Progress", color: "#E8B931" },
-  { id: "needsinput", name: "Needs Input", color: "#6B5B8A" },
-  { id: "readytolaunch", name: "Ready to Launch", color: "#5B8C5A" },
-  { id: "scheduled", name: "Scheduled", color: "#4A6FA5" },
-  { id: "delegated", name: "Delegated", color: "#3A7D7B" },
-  { id: "done", name: "Done", color: "#999" },
+  { id: "thisweek", name: "✨ This Week's Focus", color: "#E8B931" },
+  { id: "inprog", name: "🛠 In Progress", color: "#E07B39" },
+  { id: "pending", name: "⏳ Pending", color: "#C7548E" },
+  { id: "needsinput", name: "🙋 Needs Input", color: "#6B5B8A" },
+  { id: "readytolaunch", name: "🚀 Ready to Launch", color: "#5B8C5A" },
+  { id: "scheduled", name: "📅 Scheduled", color: "#4A6FA5" },
+  { id: "delegated", name: "👥 Delegated", color: "#3A7D7B" },
+  { id: "done", name: "✅ Done", color: "#999" },
+  { id: "brainstorm", name: "🧠 Brainstorm", color: "#9B2335" },
+  { id: "onice", name: "🧊 On Ice", color: "#7B8FB2" },
 ];
 
 const LINK_TYPES = [
@@ -602,12 +604,15 @@ function CardEditor({ card, onSave, onDelete, onClose, currentTab, allCards, uni
           </div>
           {(form.universes || []).length > 1 && <div style={{ fontSize: "9px", color: "#B0A890", fontStyle: "italic", marginTop: "4px" }}>This card lives in {(form.universes || []).length} universes — it's a Venn diagram kind of card.</div>}
         </div>
-        {/* LABELS */}
+        {/* STATUSES — multi-select */}
         <div style={{ marginBottom: "14px" }}>
-          <label style={{ fontSize: "10px", fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Labels</label>
-          <div style={{ display: "flex", gap: "4px", marginTop: "6px", flexWrap: "wrap" }}>
-            {LABELS.map(l => (<button key={l.id} onClick={() => toggleLabel(l.id)} style={{ padding: "4px 10px", borderRadius: "5px", background: (form.labels || []).includes(l.id) ? l.color : "#F0EDE4", color: (form.labels || []).includes(l.id) ? "#fff" : "#777", border: "none", fontSize: "10px", fontWeight: 700, cursor: "pointer", textTransform: "uppercase", letterSpacing: "0.5px" }}>{l.name}</button>))}
+          <label style={{ fontSize: "10px", fontWeight: 700, color: "#999", textTransform: "uppercase", letterSpacing: "1px" }}>Tags <span style={{ fontWeight: 400, fontStyle: "italic", textTransform: "none", letterSpacing: 0 }}> — pick all that apply</span></label>
+          <div style={{ display: "flex", gap: "5px", marginTop: "6px", flexWrap: "wrap" }}>
+            {LABELS.map(l => { const active = (form.labels || []).includes(l.id); return (
+              <button key={l.id} onClick={() => toggleLabel(l.id)} style={{ padding: "5px 12px", borderRadius: "20px", border: "2px solid", borderColor: active ? l.color : "transparent", background: active ? l.color + "22" : "#F0EDE4", color: active ? l.color : "#888", fontSize: "11px", fontWeight: 700, cursor: "pointer", transition: "all 0.15s ease" }}>{l.name}</button>
+            ); })}
           </div>
+          {(form.labels || []).length > 0 && <div style={{ fontSize: "9px", color: "#B0A890", fontStyle: "italic", marginTop: "4px" }}>{(form.labels || []).length} status{(form.labels || []).length > 1 ? "es" : ""} selected</div>}
         </div>
         {/* DUE DATE */}
         <div style={{ marginBottom: "14px" }}>
