@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "./supabase";
 import { useUniverses, useCards, useUserSettings, useEmpireApps, useEmpireSubs, useEmpirePosts } from "./useSupabase";
+import TheVault from "./TheVault";
 
 // ============================================================
 // DATA: The Everything Board v3.3 — Sellable Edition
@@ -2477,6 +2478,7 @@ export default function TheEverythingBoard({ user }) {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [showTabManager, setShowTabManager] = useState(false);
   const [showEmpire, setShowEmpire] = useState(false);
+  const [showVault, setShowVault] = useState(false);
   const [tabConfig, setTabConfig] = useState({});
   const [tabOrder, setTabOrder] = useState(BINDER_TABS.map(t => t.id));
 
@@ -2628,6 +2630,7 @@ export default function TheEverythingBoard({ user }) {
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
           <CSVToolbar cards={cards} onImport={handleImport} onToast={setToast} universes={universes} isPro={isPro} onUpgrade={() => setShowUpgrade(true)} />
           <button onClick={() => setShowTabManager(true)} title="Manage tabs" style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #444", background: "#333", color: "#E6E2D8", fontWeight: 700, cursor: "pointer", fontSize: "11px", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: "5px" }}>⚙️ Tabs</button>
+          <button onClick={() => setShowVault(true)} title="The Vault" style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #444", background: "#333", color: "#E8B931", fontWeight: 700, cursor: "pointer", fontSize: "11px", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: "5px" }}>🗄️ Vault</button>
           <ViewToggle view={viewMode} onToggle={toggleView} />
           <input value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="🔍 Search..."
             style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #333", background: "#2A2A2A", color: "#E6E2D8", fontSize: "11px", fontFamily: "'DM Sans', sans-serif", outline: "none", width: "160px" }} />
@@ -2691,6 +2694,7 @@ export default function TheEverythingBoard({ user }) {
       {editing && <CardEditor card={editing} onSave={saveCard} onDelete={deleteCard} onClose={() => setEditing(null)} currentTab={activeTab} allCards={cards} universes={universes} isCreator={isCreator} empireApps={apps} />}
       {toast && <AutoToast message={toast} onDone={() => setToast(null)} />}
       {showUpgrade && <UpgradeModal onClose={() => setShowUpgrade(false)} />}
+      {showVault && <TheVault userId={user.id} onClose={() => setShowVault(false)} />}
       {showEmpire && (
         <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.85)", zIndex: 9998, display: "flex", flexDirection: "column" }}>
           <div style={{ background: "#1A1A1A", padding: "10px 20px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
