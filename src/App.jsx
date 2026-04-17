@@ -1032,9 +1032,310 @@ function ViewToggle({ view, onToggle }) {
 // ============================================================
 // CSV TOOLBAR (Export, Import, Template)
 // ============================================================
-function CSVToolbar({ cards, onImport, onToast, universes, isPro, onUpgrade }) {
+// ============================================================
+// PASTE CARD PARSER — parses Claude skill output blocks into cards
+// Format expected:
+//   Title: foo
+//   Description: bar
+//   Board: 🚀 Projects   (or  1. Projects)
+//   Universes: CARES Consulting Inc + K Co Curated
+//   Labels: 🛠 In Progress
+//   Due Date: 2026-05-15
+//   Checklist: [ ] a | [ ] b | [ ] c
+// Multiple cards separated by a line of === or ═══
+// ============================================================
+function parsePastedCards(text, universes) {
+  const { nameToId } = buildUniverseMaps(universes);
+  // Split on separator lines (=== or ═══ with optional surrounding whitespace)
+  const blocks = text
+    .split(/^\s*(?:═══+|===+)\s*$/m)
+    .map(b => b.trim())
+    .filter(b => b.length > 0);
+
+  const parsed = [];
+  const errors = [];
+
+  blocks.forEach((block, blockIdx) => {
+    // Field extraction — case-insensitive, handles bold markdown stars
+    const getField = (name) => {
+      const re = new RegExp("^\\s*\\**\\s*" + name + "\\s*\\**\\s*:\\s*(.+)$", "im");
+      const m = block.match(re);
+      return m ? m[1].trim().replace(/^\**|\**$/g, "").trim() : "";
+    };
+    const title = getField("Title");
+    if (!title) return; // skip blocks with no title (likely breadcrumbs/prose)
+
+    const description = getField("Description");
+    const boardStr = getField("Board");
+    const universeStr = getField("Universes");
+    const labelStr = getField("Labels");
+    const dueDate = getField("Due Date") || getField("Due");
+    const checklistStr = getField("Checklist");
+
+    // Map board -> tab id
+    let tab = "projects";
+    if (boardStr) {
+      const bLower = boardStr.toLowerCase();
+      const found = BINDER_TABS.find(t =>
+        bLower.includes(t.title.toLowerCase()) || bLower.includes(t.id)
+      );
+      if (found) tab = found.id;
+      else errors.push(`Card ${blockIdx + 1} "${title}": board "${boardStr}" not found, defaulting to Projects`);
+    }
+
+    // Map label -> list id (for Kanban column placement)
+    let list = "inprogress";
+    if (labelStr) {
+      const lLower = labelStr.toLowerCase();
+      const found = STATUS_LISTS.find(l => l.title.toLowerCase().includes(lLower.replace(/[^\w\s]/g, "").trim()))
+        || STATUS_LISTS.find(l => lLower.includes(l.id));
+      if (found) list = found.id;
+    }
+
+    // Map label -> label id (for the label pill on the card)
+    const labelIds = [];
+    if (labelStr) {
+      const lLower = labelStr.toLowerCase();
+      const labelMatch = LABELS.find(L => L.name.toLowerCase().includes(lLower.replace(/[^\w\s]/g, "").trim()))
+        || LABELS.find(L => lLower.includes(L.id));
+      if (labelMatch) labelIds.push(labelMatch.id);
+    }
+
+    // Parse universes: split on + and normalize
+    const cardUniverses = [];
+    if (universeStr) {
+      const parts = universeStr.split("+").map(s => s.trim().replace(/^[^\w]+/, "").trim());
+      parts.forEach(p => {
+        if (!p) return;
+        // Exact match
+        if (nameToId[p]) { cardUniverses.push(nameToId[p]); return; }
+        // Case-insensitive / partial match
+        const found = universes.find(u =>
+          u.name.toLowerCase() === p.toLowerCase() ||
+          u.name.toLowerCase().includes(p.toLowerCase()) ||
+          p.toLowerCase().includes(u.name.toLowerCase())
+        );
+        if (found) cardUniverses.push(found.id);
+        else errors.push(`Card "${title}": universe "${p}" not found`);
+      });
+    }
+
+    // Parse checklist: "[ ] a | [x] b | [ ] c"
+    const checklist = [];
+    if (checklistStr) {
+      checklistStr.split("|").forEach(item => {
+        const cleaned = item.trim();
+        if (!cleaned) return;
+        const doneMatch = /^\[\s*[xX]\s*\]\s*(.+)$/.exec(cleaned);
+        const todoMatch = /^\[\s*\]\s*(.+)$/.exec(cleaned);
+        const text = doneMatch ? doneMatch[1] : (todoMatch ? todoMatch[1] : cleaned.replace(/^\[[^\]]*\]\s*/, ""));
+        if (text) checklist.push({ id: crypto.randomUUID(), text: text.trim(), done: !!doneMatch });
+      });
+    }
+
+    parsed.push({
+      title,
+      description,
+      tab,
+      list,
+      universes: cardUniverses,
+      labels: labelIds,
+      dueDate: dueDate || "",
+      checklist,
+      links: [],
+    });
+  });
+
+  return { cards: parsed, errors };
+}
+
+// ============================================================
+// PASTE CARDS MODAL
+// ============================================================
+function PasteCardsModal({ onClose, onAddCards, universes, onToast }) {
+  const [text, setText] = useState("");
+  const [preview, setPreview] = useState(null);
+  const [errors, setErrors] = useState([]);
+
+  const handlePreview = () => {
+    const { cards, errors } = parsePastedCards(text, universes);
+    setPreview(cards);
+    setErrors(errors);
+  };
+
+  const handleAdd = () => {
+    if (!preview || preview.length === 0) {
+      onToast("Nothing to add. Click Parse first.");
+      return;
+    }
+    onAddCards(preview);
+    onToast("Added " + preview.length + " card" + (preview.length !== 1 ? "s" : "") + ". The chaos grows.");
+    onClose();
+  };
+
+  const { idToName } = buildUniverseMaps(universes);
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#F5F1E8", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "720px", maxHeight: "90vh", overflow: "auto", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <div style={{ fontSize: "20px", fontWeight: 900, fontFamily: "'Playfair Display', serif" }}>📋 Paste Cards from Chat</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#999" }}>×</button>
+        </div>
+
+        <div style={{ fontSize: "11px", color: "#8B7E6B", marginBottom: "10px", fontStyle: "italic", lineHeight: "1.5" }}>
+          Paste the Everything Board Card block(s) from Claude. One card or many — separate multiple cards with a line of === or ═══. Claude's skill output works as-is.
+        </div>
+
+        <textarea value={text} onChange={e => setText(e.target.value)} placeholder="Paste here... Title: ... Description: ... Board: 🚀 Projects ... Universes: ... Labels: ..."
+          style={{ width: "100%", minHeight: "200px", padding: "12px", borderRadius: "10px", border: "2px solid #D4C5A0", background: "#fff", fontSize: "12px", fontFamily: "'DM Mono', monospace", outline: "none", resize: "vertical" }} />
+
+        <div style={{ display: "flex", gap: "8px", marginTop: "12px" }}>
+          <button onClick={handlePreview} style={{ padding: "10px 16px", background: "#E8B931", color: "#1A1A1A", border: "none", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "12px" }}>🔍 Parse &amp; Preview</button>
+          <button onClick={() => { setText(""); setPreview(null); setErrors([]); }} style={{ padding: "10px 16px", background: "#fff", color: "#999", border: "1px solid #ccc", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "12px" }}>Clear</button>
+        </div>
+
+        {errors.length > 0 && (
+          <div style={{ marginTop: "12px", background: "#FFF3E0", border: "1px solid #E8B931", padding: "10px", borderRadius: "8px", fontSize: "11px", color: "#8B6D3F" }}>
+            <div style={{ fontWeight: 700, marginBottom: "4px" }}>⚠️ Heads up:</div>
+            {errors.map((e, i) => <div key={i}>• {e}</div>)}
+          </div>
+        )}
+
+        {preview && preview.length > 0 && (
+          <div style={{ marginTop: "16px" }}>
+            <div style={{ fontWeight: 700, fontSize: "13px", marginBottom: "8px" }}>Preview — {preview.length} card{preview.length !== 1 ? "s" : ""}:</div>
+            {preview.map((c, i) => (
+              <div key={i} style={{ background: "#fff", borderRadius: "8px", padding: "10px 12px", marginBottom: "6px", border: "1px solid #E5E0D0", fontSize: "11px" }}>
+                <div style={{ fontWeight: 700, marginBottom: "3px" }}>{c.title}</div>
+                {c.description && <div style={{ color: "#666", marginBottom: "4px" }}>{c.description}</div>}
+                <div style={{ color: "#888", fontSize: "10px" }}>
+                  Board: <strong>{BINDER_TABS.find(t => t.id === c.tab)?.title || c.tab}</strong>
+                  {" · "}Column: <strong>{STATUS_LISTS.find(l => l.id === c.list)?.title || c.list}</strong>
+                  {c.universes.length > 0 && <> {" · "}Universes: <strong>{c.universes.map(uid => idToName[uid] || uid).join(" + ")}</strong></>}
+                  {c.dueDate && <> {" · "}Due: <strong>{c.dueDate}</strong></>}
+                  {c.checklist.length > 0 && <> {" · "}Checklist: <strong>{c.checklist.length} items</strong></>}
+                </div>
+              </div>
+            ))}
+            <button onClick={handleAdd} style={{ marginTop: "10px", padding: "12px 20px", background: "#5B8C5A", color: "#fff", border: "none", borderRadius: "10px", fontWeight: 900, cursor: "pointer", fontSize: "13px", width: "100%" }}>
+              ✅ Add {preview.length} Card{preview.length !== 1 ? "s" : ""} to Board
+            </button>
+          </div>
+        )}
+
+        {preview && preview.length === 0 && (
+          <div style={{ marginTop: "12px", color: "#999", fontSize: "12px", fontStyle: "italic" }}>
+            No cards found. Make sure the block starts with "Title: ..." — that's the required field.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ============================================================
+// DELETE MANAGER MODAL — bulk-select + delete-all
+// ============================================================
+function DeleteManagerModal({ cards, universes, onClose, onBulkDelete, onToast }) {
+  const [selected, setSelected] = useState(new Set());
+  const [confirmAll, setConfirmAll] = useState(false);
+  const [filterText, setFilterText] = useState("");
+
+  const { idToName } = buildUniverseMaps(universes);
+  const filtered = filterText
+    ? cards.filter(c => (c.title || "").toLowerCase().includes(filterText.toLowerCase())
+        || (c.description || "").toLowerCase().includes(filterText.toLowerCase()))
+    : cards;
+
+  const toggle = (id) => {
+    const s = new Set(selected);
+    if (s.has(id)) s.delete(id); else s.add(id);
+    setSelected(s);
+  };
+
+  const selectAllVisible = () => setSelected(new Set(filtered.map(c => c.id)));
+  const clearSelection = () => setSelected(new Set());
+
+  const handleDeleteSelected = () => {
+    if (selected.size === 0) { onToast("Pick some cards first."); return; }
+    if (!window.confirm("Delete " + selected.size + " card" + (selected.size !== 1 ? "s" : "") + "? This cannot be undone.")) return;
+    onBulkDelete(Array.from(selected));
+    onToast("Deleted " + selected.size + " card" + (selected.size !== 1 ? "s" : "") + ". Compost happens.");
+    onClose();
+  };
+
+  const handleDeleteAll = () => {
+    onBulkDelete(cards.map(c => c.id));
+    onToast("Nuked " + cards.length + " cards. Fresh start.");
+    onClose();
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.6)", zIndex: 10000, display: "flex", alignItems: "center", justifyContent: "center", padding: "20px" }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: "#F5F1E8", borderRadius: "16px", padding: "24px", width: "100%", maxWidth: "720px", maxHeight: "90vh", overflow: "auto", fontFamily: "'DM Sans', sans-serif" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+          <div style={{ fontSize: "20px", fontWeight: 900, fontFamily: "'Playfair Display', serif" }}>🗑 Delete Cards</div>
+          <button onClick={onClose} style={{ background: "none", border: "none", fontSize: "20px", cursor: "pointer", color: "#999" }}>×</button>
+        </div>
+
+        <input value={filterText} onChange={e => setFilterText(e.target.value)} placeholder="Filter cards by title or description..."
+          style={{ width: "100%", padding: "10px 12px", borderRadius: "8px", border: "2px solid #D4C5A0", background: "#fff", fontSize: "12px", marginBottom: "10px", fontFamily: "inherit", outline: "none" }} />
+
+        <div style={{ display: "flex", gap: "6px", marginBottom: "12px", flexWrap: "wrap", alignItems: "center" }}>
+          <button onClick={selectAllVisible} style={{ padding: "6px 10px", fontSize: "11px", background: "#fff", border: "1px solid #ccc", borderRadius: "6px", cursor: "pointer", fontWeight: 700 }}>Select visible ({filtered.length})</button>
+          <button onClick={clearSelection} style={{ padding: "6px 10px", fontSize: "11px", background: "#fff", border: "1px solid #ccc", borderRadius: "6px", cursor: "pointer", fontWeight: 700 }}>Clear selection</button>
+          <div style={{ flex: 1 }} />
+          <div style={{ fontSize: "11px", color: "#8B7E6B", fontWeight: 700 }}>{selected.size} selected</div>
+        </div>
+
+        <div style={{ maxHeight: "360px", overflow: "auto", border: "1px solid #E5E0D0", borderRadius: "8px", background: "#fff" }}>
+          {filtered.length === 0 && <div style={{ padding: "20px", textAlign: "center", color: "#999", fontStyle: "italic", fontSize: "12px" }}>No cards match that filter.</div>}
+          {filtered.map(c => {
+            const tab = BINDER_TABS.find(t => t.id === c.tab);
+            const cardUniverses = getUniverses(c);
+            return (
+              <label key={c.id} style={{ display: "flex", alignItems: "flex-start", gap: "10px", padding: "10px 12px", borderBottom: "1px solid #F0EDE4", cursor: "pointer", background: selected.has(c.id) ? "#FFF3E0" : "#fff" }}>
+                <input type="checkbox" checked={selected.has(c.id)} onChange={() => toggle(c.id)} style={{ marginTop: "2px", accentColor: "#D4644E" }} />
+                <div style={{ flex: 1, fontSize: "11px" }}>
+                  <div style={{ fontWeight: 700, color: "#1A1A1A" }}>{c.title || "(untitled)"}</div>
+                  <div style={{ color: "#999", fontSize: "10px", marginTop: "2px" }}>
+                    {tab?.title || c.tab}
+                    {cardUniverses.length > 0 && <> · {cardUniverses.map(uid => idToName[uid] || uid).join(" + ")}</>}
+                  </div>
+                </div>
+              </label>
+            );
+          })}
+        </div>
+
+        <div style={{ display: "flex", gap: "8px", marginTop: "14px", flexWrap: "wrap" }}>
+          <button onClick={handleDeleteSelected} disabled={selected.size === 0} style={{ padding: "10px 16px", background: selected.size > 0 ? "#D4644E" : "#ccc", color: "#fff", border: "none", borderRadius: "8px", fontWeight: 700, cursor: selected.size > 0 ? "pointer" : "not-allowed", fontSize: "12px" }}>
+            🗑 Delete Selected ({selected.size})
+          </button>
+          <div style={{ flex: 1 }} />
+          {!confirmAll ? (
+            <button onClick={() => setConfirmAll(true)} style={{ padding: "10px 16px", background: "#fff", color: "#9B2335", border: "1.5px solid #9B2335", borderRadius: "8px", fontWeight: 700, cursor: "pointer", fontSize: "12px" }}>
+              ☢️ Delete ALL {cards.length} cards
+            </button>
+          ) : (
+            <div style={{ display: "flex", gap: "6px", alignItems: "center", background: "#FFE5E5", padding: "6px 10px", borderRadius: "8px", border: "2px solid #9B2335" }}>
+              <span style={{ fontSize: "11px", fontWeight: 700, color: "#9B2335" }}>Sure? This nukes everything.</span>
+              <button onClick={handleDeleteAll} style={{ padding: "6px 10px", background: "#9B2335", color: "#fff", border: "none", borderRadius: "6px", fontWeight: 700, cursor: "pointer", fontSize: "11px" }}>Yes, delete all</button>
+              <button onClick={() => setConfirmAll(false)} style={{ padding: "6px 10px", background: "#fff", color: "#666", border: "1px solid #ccc", borderRadius: "6px", fontWeight: 700, cursor: "pointer", fontSize: "11px" }}>Cancel</button>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CSVToolbar({ cards, onImport, onToast, universes, isPro, onUpgrade, onBulkDelete }) {
   const fileRef = useRef(null);
   const [showMenu, setShowMenu] = useState(false);
+  const [showPaste, setShowPaste] = useState(false);
+  const [showDelete, setShowDelete] = useState(false);
 
   const handleExport = () => {
     if (!isPro) { onUpgrade(); return; }
@@ -1117,7 +1418,7 @@ function CSVToolbar({ cards, onImport, onToast, universes, isPro, onUpgrade }) {
             </button>
             <button onClick={handleTemplate} style={{
               display: "flex", alignItems: "center", gap: "10px", width: "100%", padding: "12px 16px",
-              border: "none", background: "transparent",
+              border: "none", borderBottom: "1px solid #3A3530", background: "transparent",
               color: "#E6E2D8", cursor: "pointer", fontSize: "12px", fontFamily: "'DM Sans', sans-serif",
               fontWeight: 600, textAlign: "left",
             }}>
@@ -1127,10 +1428,36 @@ function CSVToolbar({ cards, onImport, onToast, universes, isPro, onUpgrade }) {
                 <div style={{ fontSize: "9px", color: "#888", marginTop: "2px" }}>Blank CSV with instructions</div>
               </div>
             </button>
+            <button onClick={() => { setShowPaste(true); setShowMenu(false); }} style={{
+              display: "flex", alignItems: "center", gap: "10px", width: "100%", padding: "12px 16px",
+              border: "none", borderBottom: "1px solid #3A3530", background: "transparent",
+              color: "#E6E2D8", cursor: "pointer", fontSize: "12px", fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 600, textAlign: "left",
+            }}>
+              <span style={{ fontSize: "16px" }}>📝</span>
+              <div>
+                <div>Paste Cards from Chat</div>
+                <div style={{ fontSize: "9px", color: "#888", marginTop: "2px" }}>Paste Claude's card blocks directly</div>
+              </div>
+            </button>
+            <button onClick={() => { setShowDelete(true); setShowMenu(false); }} style={{
+              display: "flex", alignItems: "center", gap: "10px", width: "100%", padding: "12px 16px",
+              border: "none", background: "transparent",
+              color: "#D4644E", cursor: "pointer", fontSize: "12px", fontFamily: "'DM Sans', sans-serif",
+              fontWeight: 600, textAlign: "left",
+            }}>
+              <span style={{ fontSize: "16px" }}>🗑</span>
+              <div>
+                <div>Delete Cards</div>
+                <div style={{ fontSize: "9px", color: "#888", marginTop: "2px" }}>Bulk select or nuke all</div>
+              </div>
+            </button>
           </div>
         </>
       )}
       <input ref={fileRef} type="file" accept=".csv,.tsv,.txt" onChange={handleFileChange} style={{ display: "none" }} />
+      {showPaste && <PasteCardsModal onClose={() => setShowPaste(false)} onAddCards={onImport} universes={universes} onToast={onToast} />}
+      {showDelete && <DeleteManagerModal cards={cards} universes={universes} onClose={() => setShowDelete(false)} onBulkDelete={onBulkDelete} onToast={onToast} />}
     </div>
   );
 }
@@ -2597,6 +2924,16 @@ export default function TheEverythingBoard({ user }) {
   const handleSelectUniverse = (universeId) => { setUniverseView(universeId); setActiveTab("dashboard"); setSearchTerm(""); };
   const handleGoHome = () => { setActiveTab("dashboard"); setUniverseView(null); setSearchTerm(""); };
   const handleImport = async (newCards) => { await bulkSave([...cards, ...newCards]); setToast(`Imported ${newCards.length} card${newCards.length !== 1 ? "s" : ""}. The board grows.`); };
+
+  const handleBulkDelete = async (ids) => {
+    const idSet = new Set(ids);
+    const remaining = cards.filter(c => !idSet.has(c.id));
+    await bulkSave(remaining);
+    // Also delete each one from the db to ensure it's gone
+    for (const id of ids) {
+      try { await deleteCardFromDb(id); } catch {}
+    }
+  };
   const handleLogout = async () => { await supabase.auth.signOut(); };
 
   const tabCards = cards.filter(c => {
@@ -2628,7 +2965,7 @@ export default function TheEverythingBoard({ user }) {
           <span style={{ fontSize: "10px", color: "#888", fontFamily: "'DM Sans', sans-serif", fontStyle: "italic" }}>For people who do everything</span>
         </div>
         <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <CSVToolbar cards={cards} onImport={handleImport} onToast={setToast} universes={universes} isPro={isPro} onUpgrade={() => setShowUpgrade(true)} />
+          <CSVToolbar cards={cards} onImport={handleImport} onToast={setToast} universes={universes} isPro={isPro} onUpgrade={() => setShowUpgrade(true)} onBulkDelete={handleBulkDelete} />
           <button onClick={() => setShowTabManager(true)} title="Manage tabs" style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #444", background: "#333", color: "#E6E2D8", fontWeight: 700, cursor: "pointer", fontSize: "11px", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: "5px" }}>⚙️ Tabs</button>
           <button onClick={() => setShowVault(true)} title="The Vault" style={{ padding: "6px 12px", borderRadius: "8px", border: "1px solid #444", background: "#333", color: "#E8B931", fontWeight: 700, cursor: "pointer", fontSize: "11px", fontFamily: "'DM Sans', sans-serif", display: "flex", alignItems: "center", gap: "5px" }}>🗄️ Vault</button>
           <ViewToggle view={viewMode} onToggle={toggleView} />
