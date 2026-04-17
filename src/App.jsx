@@ -1648,8 +1648,8 @@ function CircleDashboard({ cards, onSelectUniverse, onSwitchTab, universes, onMa
     return placed;
   }, [circleData, overlapMap]);
 
-  const totalProjects = Object.values(UNIVERSE_COUNTS).reduce((a, b) => a + b.total, 0);
-  const totalActive = Object.values(UNIVERSE_COUNTS).reduce((a, b) => a + b.active, 0);
+  const totalProjects = cards.length;
+  const totalActive = cards.filter(c => c.list === "focus" || c.list === "inprogress").length;
   const totalOverlap = Object.values(overlapMap).reduce((a, b) => a + b, 0);
 
   return (
@@ -1673,7 +1673,7 @@ function CircleDashboard({ cards, onSelectUniverse, onSwitchTab, universes, onMa
 
       {/* Circle Container */}
       <div style={{
-        position: "relative", width: "100%", maxWidth: "700px", aspectRatio: "1.2",
+        position: "relative", width: "100%", maxWidth: "1100px", aspectRatio: "1.2",
         opacity: animPhase >= 1 ? 1 : 0, transition: "opacity 0.8s ease 0.2s",
       }}>
         {positions.map((circle, i) => {
@@ -1747,7 +1747,7 @@ function CircleDashboard({ cards, onSelectUniverse, onSwitchTab, universes, onMa
 
       {/* Hover Detail Panel */}
       <div style={{
-        maxWidth: "700px", width: "100%", minHeight: "60px", marginTop: "4px",
+        maxWidth: "1100px", width: "100%", minHeight: "60px", marginTop: "4px",
         opacity: hoveredId ? 1 : 0, transition: "opacity 0.2s ease",
         textAlign: "center", padding: "10px",
       }}>
