@@ -1654,7 +1654,7 @@ function CircleDashboard({ cards, onSelectUniverse, onSwitchTab, universes, onMa
 
   return (
     <div style={{
-      padding: "20px", minHeight: "calc(100vh - 60px)", display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "12px 20px 40px", display: "flex", flexDirection: "column", alignItems: "center",
       background: "radial-gradient(ellipse at 50% 40%, #E6E2D8 0%, #D8D3C6 50%, #C5BFB0 100%)",
     }}>
       {/* Title */}
@@ -1673,7 +1673,8 @@ function CircleDashboard({ cards, onSelectUniverse, onSwitchTab, universes, onMa
 
       {/* Circle Container */}
       <div style={{
-        position: "relative", width: "100%", maxWidth: "1100px", aspectRatio: "1.2",
+        position: "relative", width: "100%", maxWidth: "min(1100px, 92vw)", aspectRatio: "1.2",
+        margin: "0 auto",
         opacity: animPhase >= 1 ? 1 : 0, transition: "opacity 0.8s ease 0.2s",
       }}>
         {positions.map((circle, i) => {
