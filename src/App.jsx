@@ -1485,7 +1485,7 @@ function UniverseView({ universe, cards, onEdit, onDelete, onDrop, draggingId, o
   const boardObjs = boardIds.map(bid => BINDER_TABS.find(t => t.id === bid)).filter(Boolean);
 
   return (
-    <div style={{ minHeight: "calc(100vh - 60px)" }}>
+    <div>
       {/* Universe Header */}
       <div style={{
         background: `linear-gradient(135deg, ${u.color}22 0%, ${u.color}08 100%)`,
